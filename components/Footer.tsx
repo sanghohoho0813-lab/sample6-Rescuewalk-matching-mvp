@@ -5,8 +5,8 @@ export default function Footer() {
   return (
     <footer className="mt-16 border-t border-cream-300/60 bg-cream-100">
       <div className="container-app py-10">
-        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-          <div className="max-w-sm">
+        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between md:gap-6">
+          <div className="max-w-sm md:max-w-xs lg:max-w-sm">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-tangerine-100 text-tangerine-600">
                 <PawPrint className="h-4 w-4" />
@@ -19,7 +19,7 @@ export default function Footer() {
               유기견 보호소의 아이들과 산책 봉사자를 연결합니다.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3 md:gap-6 lg:gap-8">
             <div>
               <h3 className="mb-3 font-bold text-ink-700">둘러보기</h3>
               <ul className="space-y-2 text-ink-500">
