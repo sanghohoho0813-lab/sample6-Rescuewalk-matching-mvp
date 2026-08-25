@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-cream-50 text-ink-900 antialiased;
+  overflow-x: hidden;
+}
+
+@layer components {
+  .container-app {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-5 text-[15px] font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tangerine-500 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45;
+  }
+
+  .btn-primary {
+    @apply btn bg-tangerine-500 text-white shadow-cta hover:bg-tangerine-600 hover:shadow-card-hover;
+  }
+
+  .btn-secondary {
+    @apply btn border border-sage-300 bg-white text-sage-700 hover:border-sage-400 hover:bg-sage-50;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-500 hover:bg-cream-200/70 hover:text-ink-900;
+  }
+
+  .card {
+    @apply rounded-[20px] border border-cream-300/60 bg-white shadow-card transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-1 hover:border-tangerine-200 hover:shadow-card-hover;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium leading-none transition-colors duration-200;
+  }
+
+  .input-field {
+    @apply w-full rounded-2xl border border-cream-300 bg-white px-4 py-3 text-[15px] text-ink-900 placeholder:text-ink-300 transition-colors duration-200 focus:border-tangerine-400 focus:outline-none focus:ring-2 focus:ring-tangerine-200;
+  }
+
+  .section-label {
+    @apply mb-1 inline-flex items-center gap-1.5 text-sm font-semibold text-tangerine-600;
+  }
+}
+
+/* 스크롤바를 부드럽게 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #e5dcc9;
+  border-radius: 999px;
+  border: 2px solid #fffdf8;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
