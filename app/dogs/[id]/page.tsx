@@ -82,7 +82,13 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
           <div className="min-w-0 animate-fade-up">
             {/* 히어로 이미지 (16:9 슬롯) */}
             <div className="relative overflow-hidden rounded-[24px] border-4 border-white shadow-card-hover">
-              <DogImage dog={dog} aspect="aspect-video" />
+              <DogImage
+                dog={dog}
+                aspect="aspect-[4/3] sm:aspect-[16/10]"
+                objectPosition="50% 34%"
+                sizes="(max-width: 1024px) 100vw, 700px"
+                priority
+              />
               <div className="absolute left-4 top-4 flex gap-1.5">
                 {dog.recommended && (
                   <span className="chip bg-tangerine-500 font-bold text-white shadow-cta">

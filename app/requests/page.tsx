@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Clock, MapPin } from "lucide-react";
-import DogAvatar from "@/components/DogAvatar";
+import { DogFace } from "@/components/DogImage";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import { getDog } from "@/lib/data/dogs";
@@ -83,7 +83,7 @@ export default function RequestsPage() {
                     className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-2 border-white shadow-card sm:h-20 sm:w-20"
                     aria-label={`${dog.name} 상세 보기`}
                   >
-                    <DogAvatar dog={dog} className="h-full w-full" />
+                    <DogFace dog={dog} sizes="80px" />
                   </Link>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">

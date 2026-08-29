@@ -31,7 +31,11 @@ export default function DogCard({ dog, className }: { dog: Dog; className?: stri
       />
 
       <div className="relative">
-        <DogImage dog={dog} className="transition-transform duration-300 group-hover:scale-[1.03]" />
+        <DogImage
+          dog={dog}
+          className="[&_img]:transition-transform [&_img]:duration-300 group-hover:[&_img]:scale-[1.04]"
+          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 45vw, 380px"
+        />
         <div className="absolute left-3 top-3 z-[2] flex gap-1.5">
           {dog.recommended && (
             <span className="chip bg-tangerine-500 font-bold text-white shadow-cta">
@@ -77,13 +81,15 @@ export default function DogCard({ dog, className }: { dog: Dog; className?: stri
             {shelter?.name} · {shelter?.region} {dog.distanceKm}km
           </p>
           <div className="flex items-center justify-between gap-2">
-            <p className="flex items-center gap-1.5">
+            <p className="flex min-w-0 items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 shrink-0 text-sage-500" />
-              {dog.availableTimes.length > 0
-                ? `${formatTimeKo(dog.availableTimes[0])} 부터 ${dog.availableTimes.length}개 시간`
-                : "예약 가능한 시간 없음"}
+              <span className="truncate">
+                {dog.availableTimes.length > 0
+                  ? `${formatTimeKo(dog.availableTimes[0])} 외 ${dog.availableTimes.length - 1}개`
+                  : "가능 시간 없음"}
+              </span>
             </p>
-            <EnergyMeter level={dog.energy} />
+            <EnergyMeter level={dog.energy} className="shrink-0" />
           </div>
         </div>
 

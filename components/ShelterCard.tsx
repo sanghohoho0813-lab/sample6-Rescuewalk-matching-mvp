@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Dog as DogIcon, MapPin, PawPrint } from "lucide-react";
+import { Dog as DogIcon, MapPin } from "lucide-react";
+import ShelterImage from "@/components/ShelterImage";
 import { dogs } from "@/lib/data/dogs";
 import type { Shelter } from "@/lib/types";
 
@@ -14,28 +15,11 @@ export default function ShelterCard({ shelter }: { shelter: Shelter }) {
     >
       {/* 보호소 썸네일 슬롯 (16:9) — /public/images/shelters/ 이미지로 교체 가능 */}
       <div className="relative aspect-video w-full overflow-hidden">
-        {shelter.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`/images/shelters/${shelter.image}`}
-            alt={`${shelter.name} 사진`}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${shelter.themeColor}22, ${shelter.themeColor}55)`,
-            }}
-          >
-            <span
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 shadow-card"
-              style={{ color: shelter.themeColor }}
-            >
-              <PawPrint className="h-8 w-8" />
-            </span>
-          </div>
-        )}
+        <ShelterImage
+          shelter={shelter}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
+          zoomOnHover
+        />
         <span className="chip absolute left-3 top-3 bg-white/95 font-bold text-sage-700 shadow-card">
           {shelter.region}
         </span>

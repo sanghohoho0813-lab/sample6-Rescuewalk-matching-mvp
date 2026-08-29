@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock, MapPin, PawPrint, Phone } from "lucide-react";
+import { Clock, MapPin, Phone } from "lucide-react";
 import DogCard from "@/components/DogCard";
+import ShelterImage from "@/components/ShelterImage";
 import { dogs } from "@/lib/data/dogs";
 import { getShelter, shelters } from "@/lib/data/shelters";
 
@@ -24,29 +25,12 @@ export default function ShelterDetailPage({ params }: { params: { id: string } }
       </nav>
 
       {/* 보호소 히어로 (16:9 이미지 슬롯) */}
-      <div className="relative overflow-hidden rounded-[24px] border-4 border-white shadow-card-hover">
-        {shelter.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`/images/shelters/${shelter.image}`}
-            alt={`${shelter.name} 사진`}
-            className="aspect-video w-full object-cover sm:aspect-[21/9]"
-          />
-        ) : (
-          <div
-            className="flex aspect-video w-full items-center justify-center sm:aspect-[21/9]"
-            style={{
-              background: `linear-gradient(135deg, ${shelter.themeColor}26, ${shelter.themeColor}59)`,
-            }}
-          >
-            <span
-              className="flex h-20 w-20 items-center justify-center rounded-full bg-white/85 shadow-card"
-              style={{ color: shelter.themeColor }}
-            >
-              <PawPrint className="h-10 w-10" />
-            </span>
-          </div>
-        )}
+      <div className="relative aspect-video w-full overflow-hidden rounded-[24px] border-4 border-white shadow-card-hover sm:aspect-[21/9]">
+        <ShelterImage
+          shelter={shelter}
+          sizes="(max-width: 1280px) 100vw, 1200px"
+          priority
+        />
         <span className="chip absolute left-4 top-4 bg-white/95 font-bold text-sage-700 shadow-card">
           {shelter.region}
         </span>

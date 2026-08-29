@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   CalendarCheck,
   ClipboardCheck,
@@ -17,7 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import DogCard from "@/components/DogCard";
-import DogAvatar from "@/components/DogAvatar";
+import DogImage from "@/components/DogImage";
 import SectionHeading from "@/components/SectionHeading";
 import { dogs } from "@/lib/data/dogs";
 import { shelters } from "@/lib/data/shelters";
@@ -94,7 +95,7 @@ export default function HomePage() {
               연결합니다
             </h1>
             <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-500 sm:text-base">
-              가까운 보호소의 유기견과 산책 봉사에 참여해보세요.
+              가까운 보호소의 유기견과 산책 봉사에 참여해보세요.{" "}
               <br className="hidden sm:block" />
               당신의 한 번의 산책이 아이에게 큰 하루가 됩니다.
             </p>
@@ -115,7 +116,13 @@ export default function HomePage() {
 
           <div className="relative mx-auto w-full max-w-md animate-fade-up md:max-w-none">
             <div className="relative overflow-hidden rounded-[28px] border-4 border-white shadow-card-hover">
-              <DogAvatar dog={heroDog} className="aspect-[16/11] w-full" />
+              <DogImage
+                dog={heroDog}
+                aspect="aspect-[4/3] sm:aspect-[16/11]"
+                objectPosition="50% 38%"
+                sizes="(max-width: 768px) 100vw, 560px"
+                priority
+              />
             </div>
             {/* 플로팅 카드 */}
             <div className="absolute -bottom-4 left-3 flex items-center gap-2.5 rounded-2xl bg-white/95 px-4 py-3 shadow-card-hover backdrop-blur sm:left-6">
@@ -248,23 +255,34 @@ export default function HomePage() {
 
       {/* CTA 배너 */}
       <section className="container-app pb-4">
-        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-r from-tangerine-500 to-tangerine-400 px-6 py-10 text-white sm:px-10">
-          <PawPrint
-            aria-hidden
-            className="absolute -right-6 -top-6 h-32 w-32 rotate-12 text-white/15"
-          />
-          <div className="relative flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
-            <div>
+        <div className="card grid overflow-hidden md:grid-cols-2">
+          <div className="relative aspect-[16/10] w-full md:aspect-auto md:min-h-[280px]">
+            <Image
+              src="/images/guide/guide-04-walk.webp"
+              alt="봉사자와 강아지가 나란히 산책하는 모습"
+              fill
+              sizes="(max-width: 768px) 100vw, 560px"
+              className="object-cover"
+            />
+          </div>
+          <div className="relative flex flex-col items-start justify-center gap-4 bg-gradient-to-br from-tangerine-500 to-tangerine-400 px-6 py-10 text-white sm:px-10">
+            <PawPrint
+              aria-hidden
+              className="absolute -right-6 -top-6 h-32 w-32 rotate-12 text-white/15"
+            />
+            <div className="relative">
               <h2 className="text-xl font-extrabold sm:text-2xl">
                 오늘, 한 아이의 산책 친구가 되어주세요.
               </h2>
-              <p className="mt-1.5 text-sm text-tangerine-50">
-                작은 나눔이 모여 큰 변화를 만듭니다. 지금 산책을 기다리는 아이들이 있어요.
+              <p className="mt-2 text-sm leading-relaxed text-tangerine-50">
+                작은 나눔이 모여 큰 변화를 만듭니다.
+                <br />
+                지금 산책을 기다리는 아이들이 있어요.
               </p>
             </div>
             <Link
               href="/dogs"
-              className="btn shrink-0 bg-white text-tangerine-600 hover:bg-cream-100"
+              className="btn relative shrink-0 bg-white text-tangerine-600 hover:bg-cream-100"
             >
               산책 신청해보기
             </Link>

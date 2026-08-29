@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CalendarDays, Clock3, Dog as DogIcon, Footprints, Heart, Timer } from "lucide-react";
-import DogAvatar from "@/components/DogAvatar";
+import { DogFace } from "@/components/DogImage";
 import EmptyState from "@/components/EmptyState";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
@@ -102,7 +102,7 @@ export default function ActivityPage() {
                   href={`/dogs/${dog.id}`}
                   className="card card-hover w-28 shrink-0 overflow-hidden text-center"
                 >
-                  <DogAvatar dog={dog} className="aspect-square w-full" />
+                  <DogFace dog={dog} sizes="112px" />
                   <p className="truncate px-2 py-2 text-sm font-bold text-ink-900">{dog.name}</p>
                 </Link>
               ))}
@@ -126,7 +126,7 @@ export default function ActivityPage() {
                         className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border-2 border-white shadow-card"
                         aria-label={`${dog.name} 상세 보기`}
                       >
-                        <DogAvatar dog={dog} className="h-full w-full" />
+                        <DogFace dog={dog} sizes="56px" />
                       </Link>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

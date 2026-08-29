@@ -11,7 +11,7 @@ import {
   ShoppingBag,
   Ticket,
 } from "lucide-react";
-import DogAvatar from "@/components/DogAvatar";
+import { DogFace } from "@/components/DogImage";
 import EmptyState from "@/components/EmptyState";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
@@ -84,7 +84,7 @@ export default function CompletePage() {
         </div>
         <div className="flex items-center gap-4 border-b border-cream-200 p-5">
           <span className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-2 border-white shadow-card">
-            <DogAvatar dog={dog} className="h-full w-full" />
+            <DogFace dog={dog} sizes="64px" />
           </span>
           <div className="leading-tight">
             <p className="text-lg font-extrabold text-ink-900">{dog.name}</p>

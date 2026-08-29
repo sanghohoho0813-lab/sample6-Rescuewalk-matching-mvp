@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   CalendarCheck,
   ClipboardCheck,
@@ -18,28 +19,54 @@ const START_STEPS = [
     icon: DogIcon,
     title: "1. 마음이 가는 아이를 찾아요",
     desc: "강아지 찾기에서 성격, 산책 난이도, 지역을 보고 나와 잘 맞는 아이를 골라요. '초보 가능' 태그가 있는 아이부터 시작하면 좋아요.",
+    image: "guide-01-choose.webp",
+    alt: "태블릿으로 산책 가능한 강아지 목록을 살펴보는 모습",
   },
   {
     icon: CalendarCheck,
     title: "2. 날짜와 시간을 선택해요",
     desc: "아이마다 산책 가능한 시간이 달라요. 내 일정과 맞는 시간을 선택하고 간단한 정보를 입력하면 신청 끝!",
+    image: "guide-02-datetime.webp",
+    alt: "휴대폰으로 산책 날짜와 시간을 선택하는 모습",
   },
   {
     icon: MapPin,
     title: "3. 보호소에 방문해요",
     desc: "예약 시간 10분 전까지 도착해서 매니저에게 예약번호를 보여주세요. 아이와 인사하는 법을 안내받아요.",
+    image: "guide-03-checkin.webp",
+    alt: "보호소에서 예약을 확인하고 리드줄을 건네받는 모습",
   },
   {
     icon: Footprints,
     title: "4. 함께 걸어요",
     desc: "보호소가 안내하는 산책 코스를 따라 아이의 속도에 맞춰 걸어요. 산책 후에는 활동 기록에 오늘의 이야기가 남아요.",
+    image: "guide-04-walk.webp",
+    alt: "봉사자와 강아지가 나란히 산책하는 모습",
   },
 ];
 
 const PREPARATIONS = [
-  { icon: Shirt, title: "복장", desc: "활동하기 편한 옷과 운동화. 밝은 색 옷이면 아이들이 덜 긴장해요." },
-  { icon: ShoppingBag, title: "준비물", desc: "물과 물그릇, 신분증. 배변봉투와 간식은 보호소에서 제공해요." },
-  { icon: HandHeart, title: "마음가짐", desc: "아이의 속도를 존중하는 마음이면 충분해요. 잘 걷지 않아도 괜찮아요." },
+  {
+    icon: Shirt,
+    title: "복장",
+    desc: "활동하기 편한 옷과 운동화. 밝은 색 옷이면 아이들이 덜 긴장해요.",
+    image: "guide-prep-clothes.webp",
+    alt: "산책 전 운동화를 신는 모습",
+  },
+  {
+    icon: ShoppingBag,
+    title: "준비물",
+    desc: "물과 물그릇, 신분증. 배변봉투와 간식은 보호소에서 제공해요.",
+    image: "guide-prep-supplies.webp",
+    alt: "물병, 접이식 물그릇, 간식 파우치, 배변봉투와 리드줄",
+  },
+  {
+    icon: HandHeart,
+    title: "마음가짐",
+    desc: "아이의 속도를 존중하는 마음이면 충분해요. 잘 걷지 않아도 괜찮아요.",
+    image: "guide-prep-mindset.webp",
+    alt: "강아지에게 천천히 손을 내밀어 인사하는 봉사자",
+  },
 ];
 
 const FIELD_RULES = [
@@ -92,15 +119,30 @@ export default function GuidePage() {
       {/* 처음 참여하는 법 */}
       <section>
         <h2 className="mb-4 text-lg font-extrabold text-ink-900">처음 참여하는 법</h2>
-        <ol className="space-y-3">
-          {START_STEPS.map(({ icon: Icon, title, desc }) => (
-            <li key={title} className="card flex gap-4 p-5">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-tangerine-100 text-tangerine-600">
-                <Icon className="h-5 w-5" />
-              </span>
-              <div>
-                <h3 className="font-bold text-ink-900">{title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-ink-500">{desc}</p>
+        <ol className="space-y-4">
+          {START_STEPS.map(({ icon: Icon, title, desc, image, alt }, i) => (
+            <li
+              key={title}
+              className="card card-hover overflow-hidden sm:flex sm:items-stretch sm:even:flex-row-reverse"
+            >
+              <div className="relative aspect-[16/10] w-full shrink-0 sm:aspect-auto sm:w-[44%]">
+                <Image
+                  src={`/images/guide/${image}`}
+                  alt={alt}
+                  fill
+                  sizes="(max-width: 640px) 100vw, 340px"
+                  priority={i === 0}
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex flex-1 items-start gap-4 p-5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-tangerine-100 text-tangerine-600">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-ink-900">{title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-ink-500">{desc}</p>
+                </div>
               </div>
             </li>
           ))}
@@ -110,14 +152,25 @@ export default function GuidePage() {
       {/* 준비물 & 복장 */}
       <section className="mt-10">
         <h2 className="mb-4 text-lg font-extrabold text-ink-900">준비물 & 복장 안내</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {PREPARATIONS.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="card flex flex-col gap-2.5 p-5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sage-100 text-sage-600">
-                <Icon className="h-5 w-5" />
-              </span>
-              <h3 className="font-bold text-ink-900">{title}</h3>
-              <p className="text-[13px] leading-relaxed text-ink-500">{desc}</p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {PREPARATIONS.map(({ icon: Icon, title, desc, image, alt }) => (
+            <div key={title} className="card card-hover overflow-hidden">
+              <div className="relative aspect-[4/3] w-full">
+                <Image
+                  src={`/images/guide/${image}`}
+                  alt={alt}
+                  fill
+                  sizes="(max-width: 640px) 100vw, 260px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex flex-col gap-2.5 p-5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sage-100 text-sage-600">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <h3 className="font-bold text-ink-900">{title}</h3>
+                <p className="text-[13px] leading-relaxed text-ink-500">{desc}</p>
+              </div>
             </div>
           ))}
         </div>

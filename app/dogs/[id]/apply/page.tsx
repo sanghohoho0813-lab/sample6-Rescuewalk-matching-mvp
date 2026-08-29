@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Stepper from "@/components/Stepper";
 import TimeSlotPicker from "@/components/TimeSlotPicker";
-import DogAvatar from "@/components/DogAvatar";
+import { DogFace } from "@/components/DogImage";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
@@ -127,7 +127,7 @@ export default function ApplyPage() {
         </button>
         <div className="flex min-w-0 items-center gap-3">
           <span className="h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-white shadow-card">
-            <DogAvatar dog={dog} className="h-full w-full" />
+            <DogFace dog={dog} sizes="64px" />
           </span>
           <div className="min-w-0 leading-tight">
             <h1 className="truncate text-lg font-extrabold text-ink-900">
@@ -350,7 +350,7 @@ export default function ApplyPage() {
             <div className="card mt-5 overflow-hidden">
               <div className="flex items-center gap-4 bg-cream-100 p-5">
                 <span className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-2 border-white shadow-card">
-                  <DogAvatar dog={dog} className="h-full w-full" />
+                  <DogFace dog={dog} sizes="64px" />
                 </span>
                 <div className="leading-tight">
                   <p className="text-lg font-extrabold text-ink-900">{dog.name}</p>
