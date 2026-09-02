@@ -12,6 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import DogCard from "@/components/DogCard";
+import { MiraeMark } from "@/components/MiraeBrand";
 import EmptyState from "@/components/EmptyState";
 import { dogs } from "@/lib/data/dogs";
 import { useStore } from "@/lib/store";
@@ -187,12 +188,15 @@ export default function MyPage() {
         </ul>
       </section>
 
-      <div className="card mt-8 flex items-center gap-3 bg-cream-100 p-5">
-        <PawPrint className="h-5 w-5 shrink-0 text-tangerine-500" />
-        <p className="text-[13px] leading-relaxed text-ink-500">
-          RescueWalk는 데모 서비스예요. 신청 내역과 활동 기록은 이 브라우저에만 저장되며,
-          실제 보호소 예약과 연결되지 않아요.
-        </p>
+      <div className="card mt-8 flex items-start gap-3.5 bg-cream-100 p-5">
+        <MiraeMark size={32} className="mt-0.5" />
+        <div>
+          <p className="text-[13px] leading-relaxed text-ink-500">
+            RescueWalk는 <strong className="font-semibold text-ink-700">미래에이아이랩</strong>이
+            만든 데모 서비스예요. 신청 내역과 활동 기록은 이 브라우저에만 저장되며, 실제 보호소
+            예약과 연결되지 않아요.
+          </p>
+        </div>
       </div>
     </div>
   );

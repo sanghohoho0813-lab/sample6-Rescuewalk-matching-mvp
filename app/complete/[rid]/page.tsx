@@ -12,6 +12,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { DogFace } from "@/components/DogImage";
+import { MiraeSignature } from "@/components/MiraeBrand";
 import EmptyState from "@/components/EmptyState";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
@@ -136,6 +137,10 @@ export default function CompletePage() {
         <Link href="/dogs" className="btn-secondary flex-1">
           <Footprints className="h-4 w-4" /> 다른 아이 둘러보기
         </Link>
+      </div>
+
+      <div className="mt-10 flex animate-fade-up justify-center">
+        <MiraeSignature />
       </div>
     </div>
   );

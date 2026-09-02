@@ -20,6 +20,7 @@ import {
 import DogCard from "@/components/DogCard";
 import DogImage from "@/components/DogImage";
 import SectionHeading from "@/components/SectionHeading";
+import { MiraeBadge } from "@/components/MiraeBrand";
 import { dogs } from "@/lib/data/dogs";
 import { shelters } from "@/lib/data/shelters";
 import { testimonials } from "@/lib/data/testimonials";
@@ -84,6 +85,9 @@ export default function HomePage() {
         />
         <div className="container-app relative grid items-center gap-10 py-14 md:grid-cols-2 md:py-20">
           <div className="animate-fade-up">
+            <div className="mb-4">
+              <MiraeBadge />
+            </div>
             <p className="section-label">
               <PawPrint className="h-4 w-4" /> 유기견 산책 매칭 서비스
             </p>

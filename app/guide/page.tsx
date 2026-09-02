@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { MiraeSignature } from "@/components/MiraeBrand";
 import {
   CalendarCheck,
   ClipboardCheck,
@@ -219,6 +220,7 @@ export default function GuidePage() {
         <Link href="/dogs" className="btn-primary">
           <PawPrint className="h-4 w-4" /> 산책 가능한 아이들 보기
         </Link>
+        <MiraeSignature prefix="서비스 기획 · 개발" className="mt-2" width={96} />
       </div>
     </div>
   );

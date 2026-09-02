@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { PawPrint } from "lucide-react";
+import { MiraeWordmark } from "@/components/MiraeBrand";
 
 export default function Footer() {
   return (
     <footer className="mt-16 border-t border-cream-300/60 bg-cream-100">
-      <div className="container-app py-10">
+      <div className="container-app py-10 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-10">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between md:gap-6">
           <div className="max-w-sm md:max-w-xs lg:max-w-sm">
             <div className="flex items-center gap-2">
@@ -45,9 +46,17 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <p className="mt-10 border-t border-cream-300/60 pt-6 text-xs text-ink-400">
-          © 2026 RescueWalk. 데모 서비스로, 표시되는 보호소·강아지 정보는 예시입니다.
-        </p>
+        <div className="mt-10 flex flex-col gap-5 border-t border-cream-300/60 pt-6 sm:flex-row sm:items-end sm:justify-between">
+          <p className="text-xs leading-relaxed text-ink-400">
+            © 2026 RescueWalk. 데모 서비스로, 표시되는 보호소·강아지 정보는 예시입니다.
+          </p>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-300">
+              Designed &amp; Built by
+            </span>
+            <MiraeWordmark width={140} />
+          </div>
+        </div>
       </div>
     </footer>
   );

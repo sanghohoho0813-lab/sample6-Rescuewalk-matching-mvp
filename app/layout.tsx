@@ -13,6 +13,18 @@ export const metadata: Metadata = {
   },
   description:
     "산책이 필요한 아이와, 함께 걸어줄 당신을 연결합니다. 가까운 보호소의 유기견과 산책 봉사에 참여해보세요.",
+  applicationName: "RescueWalk",
+  authors: [{ name: "미래에이아이랩" }],
+  creator: "미래에이아이랩",
+  publisher: "미래에이아이랩",
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: "RescueWalk",
+    title: "RescueWalk — 유기견 산책 매칭",
+    description:
+      "산책이 필요한 아이와, 함께 걸어줄 당신을 연결합니다. 미래에이아이랩이 만든 유기견 산책 매칭 서비스.",
+  },
 };
 
 export const viewport: Viewport = {
