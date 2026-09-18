@@ -4,6 +4,7 @@ import { StoreProvider } from "@/lib/store";
 import Header from "@/components/Header";
 import MobileNav from "@/components/MobileNav";
 import Footer from "@/components/Footer";
+import SampleBridgeSlot from "@/components/SampleBridgeSlot";
 import Toast from "@/components/Toast";
 
 export const metadata: Metadata = {
@@ -48,7 +49,8 @@ export default function RootLayout({
       <body className="font-sans">
         <StoreProvider>
           <Header />
-          <main className="min-h-[70vh] pb-24 md:pb-0">{children}</main>
+          <main className="min-h-[70vh] pb-10 md:pb-0">{children}</main>
+          <SampleBridgeSlot />
           <Footer />
           <MobileNav />
           <Toast />

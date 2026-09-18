@@ -85,6 +85,49 @@ public/images/
 `app/layout.tsx` 의 metadata(`creator`/`publisher`/OpenGraph)에도 제작사를 명시해
 링크 공유 시 노출됩니다.
 
+## 샘플 공통 CTA 브릿지
+
+샘플을 다 본 사용자를 제작사 인지 → 상담 전환 → 다른 샘플·홈페이지로 이어주는
+공통 섹션입니다. `app/layout.tsx` 에 한 번 삽입되어 **모든 페이지 하단**(푸터 위)에
+동일하게 노출됩니다.
+
+```
+components/SampleBridgeCTA.tsx   CTA 섹션 본문 (다른 샘플에 그대로 복사 가능)
+components/SampleBridgeSlot.tsx  경로별 노출 제어 (신청 폼 단계에서만 숨김)
+lib/brand.ts                     링크 · 문구 상수 ← 여기만 고치면 전체 반영
+```
+
+**링크를 바꾸려면** → `lib/brand.ts` 의 `MIRAE_LINKS`
+
+| 키 | 현재 값 | 쓰이는 곳 |
+| --- | --- | --- |
+| `consult` | `miraeailab.com/business-diagnosis` | 메인 CTA "우리 회사도 만들어보기" |
+| `samples` | `miraeailab.com/business-services` | 서브 "다른 샘플 보기" |
+| `home` | `miraeailab.com/` | 서브 "미래AI랩 홈페이지" |
+
+**문구를 바꾸려면** → `lib/brand.ts` 의 `MIRAE_CTA_COPY`
+(`eyebrow` 배지 / `kicker` 제작 표기 / `title` 헤드라인 / `description` 회사 소개 /
+`note` 버튼 보조문구 / `consultLabel`·`samplesLabel`·`homeLabel` 버튼 라벨).
+특정 페이지에서만 다르게 쓰려면 `<SampleBridgeCTA title="..." consultHref="..." />`
+처럼 같은 이름의 props 로 덮어쓸 수 있습니다.
+
+**노출 경로를 바꾸려면** → `components/SampleBridgeSlot.tsx` 의 `HIDDEN_PATHS`.
+현재 `/dogs/[id]/apply` 만 제외되어 있습니다(5단계 신청 폼 진행 중에 외부 링크를
+노출하면 샘플의 핵심 전환 흐름을 중간에 이탈시키기 때문). 신청이 끝난
+`/complete/[rid]` 에서는 정상 노출되어, 흐름을 다 본 직후에 CTA를 만납니다.
+
+디자인·모션 원칙
+
+- 샘플 본문(크림 톤)과 구분되는 딥네이비 AX 톤 밴드 — "여기부터는 제작사 영역"이 한눈에 읽힘
+- CTA 안에는 로고 이미지를 넣지 않음(푸터에 이미 노출). 브랜드명과 소개 문구만 텍스트로 전달
+- 애니메이션은 두 개뿐: 메인 CTA의 light sweep(6초 주기, 실제 발광 약 1.5초)과
+  배지 점의 느린 호흡(3.2초). hover 시 살짝 lift + glow
+- `prefers-reduced-motion` 에서는 sweep이 숨고 무한 애니메이션이 모두 정지
+
+모바일 하단 sticky mini CTA는 넣지 않았습니다. 이 샘플은 이미 하단 Bottom Navigation과
+강아지 상세의 Sticky 신청 버튼을 쓰고 있어, 세 번째 고정 바가 겹치면 핵심 전환(산책 신청)을
+가립니다.
+
 ## Supabase 연동 포인트
 
 MVP는 데모 모드로 동작하지만, 데이터 계층이 교체 가능하게 분리되어 있습니다.

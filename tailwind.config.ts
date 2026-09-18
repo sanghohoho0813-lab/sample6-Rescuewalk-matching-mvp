@@ -47,6 +47,20 @@ const config: Config = {
           400: "#8B8177",
           300: "#AFA69B",
         },
+        /** 제작사(미래AI랩) 브랜드 컬러 — 로고 원본에서 추출 */
+        mirae: {
+          50: "#EEF8FC",
+          100: "#D3EDF7",
+          200: "#A6DCEF",
+          300: "#6AC6E5",
+          400: "#35B4DE",
+          500: "#1A9BC9",
+          600: "#127BA4",
+          700: "#125F7E",
+          800: "#123F55",
+          900: "#0E2536",
+          950: "#081726",
+        },
       },
       fontFamily: {
         sans: [
@@ -93,6 +107,22 @@ const config: Config = {
           "0%, 100%": { transform: "rotate(-8deg)" },
           "50%": { transform: "rotate(8deg)" },
         },
+        /**
+         * 메인 CTA용 light sweep.
+         * 전체 6초 중 실제로 빛이 지나가는 구간은 약 1.5초뿐이고 나머지는 완전 투명 —
+         * 광고 배너처럼 계속 번쩍이지 않고 "은은하게 한 번씩" 스치는 정도만 보입니다.
+         */
+        "light-sweep": {
+          "0%, 70%": { transform: "translateX(-130%) skewX(-18deg)", opacity: "0" },
+          "76%": { opacity: "0.5" },
+          "90%": { opacity: "0.28" },
+          "100%": { transform: "translateX(230%) skewX(-18deg)", opacity: "0" },
+        },
+        /** 배지의 작은 상태 점 — 아주 느린 호흡 */
+        "soft-pulse": {
+          "0%, 100%": { opacity: "0.45", transform: "scale(0.9)" },
+          "50%": { opacity: "1", transform: "scale(1)" },
+        },
       },
       animation: {
         "fade-up": "fade-up 0.45s ease-out both",
@@ -100,6 +130,8 @@ const config: Config = {
         "pop-in": "pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
         "slide-up": "slide-up 0.28s ease-out both",
         wag: "wag 1s ease-in-out infinite",
+        "light-sweep": "light-sweep 6s ease-in-out infinite",
+        "soft-pulse": "soft-pulse 3.2s ease-in-out infinite",
       },
     },
   },

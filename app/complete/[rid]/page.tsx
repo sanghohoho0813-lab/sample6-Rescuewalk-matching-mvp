@@ -12,7 +12,6 @@ import {
   Ticket,
 } from "lucide-react";
 import { DogFace } from "@/components/DogImage";
-import { MiraeSignature } from "@/components/MiraeBrand";
 import EmptyState from "@/components/EmptyState";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
@@ -59,7 +58,10 @@ export default function CompletePage() {
       <div className="text-center">
         <div className="relative mx-auto flex h-20 w-20 animate-pop-in items-center justify-center rounded-full bg-sage-500 text-white shadow-card-hover">
           <Check className="h-10 w-10" strokeWidth={3} />
-          <span className="absolute -right-1.5 -top-1.5 animate-wag text-2xl" aria-hidden>
+          <span
+            className="absolute -right-1.5 -top-1.5 animate-wag text-2xl motion-reduce:animate-none"
+            aria-hidden
+          >
             🐾
           </span>
         </div>
@@ -137,10 +139,6 @@ export default function CompletePage() {
         <Link href="/dogs" className="btn-secondary flex-1">
           <Footprints className="h-4 w-4" /> 다른 아이 둘러보기
         </Link>
-      </div>
-
-      <div className="mt-10 flex animate-fade-up justify-center">
-        <MiraeSignature />
       </div>
     </div>
   );
