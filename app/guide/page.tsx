@@ -108,7 +108,7 @@ export default function GuidePage() {
         <p className="section-label">
           <PawPrint className="h-4 w-4" /> 처음이신가요?
         </p>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
           봉사 가이드
         </h1>
         <p className="mt-2 text-[15px] leading-relaxed text-ink-500">
@@ -118,7 +118,7 @@ export default function GuidePage() {
 
       {/* 처음 참여하는 법 */}
       <section>
-        <h2 className="mb-4 text-lg font-extrabold text-ink-900">처음 참여하는 법</h2>
+        <h2 className="mb-4 text-lg font-bold text-ink-900">처음 참여하는 법</h2>
         <ol className="space-y-4">
           {START_STEPS.map(({ icon: Icon, title, desc, image, alt }, i) => (
             <li
@@ -136,7 +136,7 @@ export default function GuidePage() {
                 />
               </div>
               <div className="flex flex-1 items-start gap-4 p-5">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-tangerine-100 text-tangerine-600">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sage-100 text-sage-700">
                   <Icon className="h-5 w-5" />
                 </span>
                 <div>
@@ -151,7 +151,7 @@ export default function GuidePage() {
 
       {/* 준비물 & 복장 */}
       <section className="mt-10">
-        <h2 className="mb-4 text-lg font-extrabold text-ink-900">준비물 & 복장 안내</h2>
+        <h2 className="mb-4 text-lg font-bold text-ink-900">준비물 & 복장 안내</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           {PREPARATIONS.map(({ icon: Icon, title, desc, image, alt }) => (
             <div key={title} className="card card-hover overflow-hidden">
@@ -178,7 +178,7 @@ export default function GuidePage() {
 
       {/* 현장 행동 가이드 */}
       <section className="mt-10">
-        <h2 className="mb-4 text-lg font-extrabold text-ink-900">현장 행동 가이드</h2>
+        <h2 className="mb-4 text-lg font-bold text-ink-900">현장 행동 가이드</h2>
         <ul className="card space-y-3 p-5">
           {FIELD_RULES.map((rule) => (
             <li key={rule} className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-700">
@@ -191,13 +191,13 @@ export default function GuidePage() {
 
       {/* FAQ */}
       <section className="mt-10" id="faq">
-        <h2 className="mb-4 text-lg font-extrabold text-ink-900">자주 묻는 질문</h2>
+        <h2 className="mb-4 text-lg font-bold text-ink-900">자주 묻는 질문</h2>
         <div className="space-y-3">
           {FAQS.map((faq) => (
             <details key={faq.q} className="card group overflow-hidden">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-bold text-ink-900 transition-colors hover:text-tangerine-600 [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-bold text-ink-900 transition-colors hover:text-ink-900 [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center gap-2.5">
-                  <span className="text-tangerine-500">Q.</span>
+                  <span className="text-sage-600">Q.</span>
                   {faq.q}
                 </span>
                 <span className="text-ink-300 transition-transform duration-200 group-open:rotate-45">＋</span>
@@ -211,7 +211,7 @@ export default function GuidePage() {
       </section>
 
       <div className="card mt-10 flex flex-col items-center gap-4 bg-gradient-to-b from-sage-50 to-cream-50 p-8 text-center">
-        <p className="text-lg font-extrabold text-ink-900">
+        <p className="text-lg font-bold text-ink-900">
           이제 준비는 끝났어요.
           <br />
           산책을 기다리는 아이들이 있어요.

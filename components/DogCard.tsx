@@ -1,110 +1,84 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Clock, MapPin, Sparkles } from "lucide-react";
+import { MapPin } from "lucide-react";
 import DogImage from "@/components/DogImage";
 import FavoriteButton from "@/components/FavoriteButton";
-import Tag, { PersonalityTags } from "@/components/Tag";
+import { PersonalityTags } from "@/components/Tag";
 import EnergyMeter from "@/components/EnergyMeter";
 import { getShelter } from "@/lib/data/shelters";
-import { cn, formatTimeKo } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { Dog } from "@/lib/types";
 
-const DIFFICULTY_TONE: Record<Dog["difficulty"], string> = {
-  쉬움: "bg-sage-100 text-sage-700",
-  보통: "bg-cream-200 text-ink-700",
-  어려움: "bg-tangerine-100 text-tangerine-700",
-};
-
-export default function DogCard({ dog, className }: { dog: Dog; className?: string }) {
-  const router = useRouter();
+/**
+ * 강아지 카드.
+ * 카드 전체가 상세로 가는 하나의 링크입니다. 목록에 같은 크기의 신청 버튼을 여러 개 두면
+ * 서로 경쟁하므로, 신청은 상세 화면의 단일 주요 행동으로 모았습니다.
+ */
+export default function DogCard({
+  dog,
+  className,
+  priority = false,
+}: {
+  dog: Dog;
+  className?: string;
+  priority?: boolean;
+}) {
   const shelter = getShelter(dog.shelterId);
   const unavailable = dog.availability === "unavailable";
+  const today = dog.availableToday && dog.availability === "available";
 
   return (
-    <article className={cn("card card-hover group relative flex flex-col overflow-hidden", className)}>
-      <Link
-        href={`/dogs/${dog.id}`}
-        className="absolute inset-0 z-[1]"
-        aria-label={`${dog.name} 상세 보기`}
-      />
-
-      <div className="relative">
+    <article className={cn("group relative", className)}>
+      <div className="relative overflow-hidden rounded-[20px] bg-cream-200">
         <DogImage
           dog={dog}
-          className="[&_img]:transition-transform [&_img]:duration-300 group-hover:[&_img]:scale-[1.04]"
+          priority={priority}
+          className={cn(
+            "[&_img]:transition-transform [&_img]:duration-300 group-hover:[&_img]:scale-[1.03] motion-reduce:[&_img]:transition-none",
+            unavailable && "opacity-70 grayscale-[35%]"
+          )}
           sizes="(max-width: 640px) 100vw, (max-width: 1280px) 45vw, 380px"
         />
-        <div className="absolute left-3 top-3 z-[2] flex gap-1.5">
-          {dog.recommended && (
-            <span className="chip bg-tangerine-500 font-bold text-white shadow-cta">
-              <Sparkles className="h-3 w-3" /> 추천
-            </span>
-          )}
-          {dog.availableToday && !unavailable && (
-            <span className="chip bg-white/95 font-bold text-sage-700 shadow-card">
-              오늘 산책 가능
-            </span>
-          )}
-          {unavailable && (
-            <span className="chip bg-ink-900/70 font-bold text-white">잠시 쉬는 중</span>
-          )}
-        </div>
-        <FavoriteButton
-          dogId={dog.id}
-          dogName={dog.name}
-          className="absolute right-3 top-3 z-[2]"
-        />
+        {(today || unavailable) && (
+          <span
+            className={cn(
+              "chip absolute left-3 top-3 font-semibold",
+              unavailable ? "bg-ink-900/75 text-white" : "bg-white/95 text-sage-800 shadow-card"
+            )}
+          >
+            {unavailable ? "잠시 쉬는 중" : "오늘 산책 가능"}
+          </span>
+        )}
+        <FavoriteButton dogId={dog.id} dogName={dog.name} className="absolute right-3 top-3 z-[2]" />
       </div>
 
-      <div className="flex flex-1 flex-col gap-2.5 p-4">
+      <div className="px-1 pt-3">
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="text-lg font-extrabold text-ink-900">
-            {dog.name}
-            <span className="ml-1.5 text-sm font-medium text-ink-400">
+          <h3 className="text-lg font-bold text-ink-900">
+            <Link href={`/dogs/${dog.id}`} className="after:absolute after:inset-0 after:z-[1] focus-visible:outline-none">
+              {dog.name}
+            </Link>
+            <span className="ml-1.5 text-sm font-normal text-ink-400">
               {dog.age}살 · {dog.gender}
             </span>
           </h3>
-          <span className={cn("chip", DIFFICULTY_TONE[dog.difficulty])}>
-            산책 {dog.difficulty}
+          <EnergyMeter level={dog.energy} className="shrink-0" />
+        </div>
+        <p className="mt-0.5 truncate text-sm text-ink-500">
+          {dog.breed} · {dog.size}견 · 산책 {dog.difficulty}
+        </p>
+        <PersonalityTags tags={dog.personality} max={2} className="mt-2.5" />
+        <p className="mt-2.5 flex items-center gap-1 text-[13px] text-ink-400">
+          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="truncate">
+            {shelter?.name} · {shelter?.region} <span className="tnum">{dog.distanceKm}km</span>
           </span>
-        </div>
-
-        <p className="text-sm text-ink-500">{dog.breed} · {dog.size}견</p>
-
-        <PersonalityTags tags={dog.personality} max={3} />
-
-        <div className="mt-auto space-y-1.5 pt-1 text-[13px] text-ink-500">
-          <p className="flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-sage-500" />
-            {shelter?.name} · {shelter?.region} {dog.distanceKm}km
-          </p>
-          <div className="flex items-center justify-between gap-2">
-            <p className="flex min-w-0 items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 shrink-0 text-sage-500" />
-              <span className="truncate">
-                {dog.availableTimes.length > 0
-                  ? `${formatTimeKo(dog.availableTimes[0])} 외 ${dog.availableTimes.length - 1}개`
-                  : "가능 시간 없음"}
-              </span>
-            </p>
-            <EnergyMeter level={dog.energy} className="shrink-0" />
-          </div>
-        </div>
-
-        <button
-          type="button"
-          disabled={unavailable}
-          onClick={(e) => {
-            e.preventDefault();
-            router.push(`/dogs/${dog.id}/apply`);
-          }}
-          className="btn-primary relative z-[2] mt-2 w-full text-sm"
-        >
-          {unavailable ? "지금은 쉬고 있어요" : "산책 신청하기"}
-        </button>
+        </p>
       </div>
+      {/* 키보드 포커스가 카드 전체 링크에 있을 때 보이는 테두리 */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-[20px] opacity-0 ring-2 ring-sage-400 ring-offset-4 ring-offset-cream-50 group-has-[a:focus-visible]:opacity-100"
+      />
     </article>
   );
 }

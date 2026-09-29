@@ -22,7 +22,7 @@ export default function EnergyMeter({
           aria-hidden
           className={cn(
             "h-3.5 w-3.5",
-            i <= level ? "fill-tangerine-400 text-tangerine-400" : "text-cream-300"
+            i <= level ? "fill-sage-500 text-sage-500" : "text-cream-300"
           )}
         />
       ))}

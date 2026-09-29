@@ -1,296 +1,193 @@
 import Link from "next/link";
 import Image from "next/image";
-import {
-  CalendarCheck,
-  ClipboardCheck,
-  Dog as DogIcon,
-  Footprints,
-  HandHeart,
-  Heart,
-  HeartHandshake,
-  Home as HomeIcon,
-  MapPin,
-  PawPrint,
-  Smile,
-  Sparkles,
-  Star,
-  Sun,
-  Users,
-} from "lucide-react";
-import DogCard from "@/components/DogCard";
+import { ArrowRight } from "lucide-react";
 import DogImage from "@/components/DogImage";
-import SectionHeading from "@/components/SectionHeading";
-import { MiraeBadge } from "@/components/MiraeBrand";
-import { dogs } from "@/lib/data/dogs";
+import FeaturedDogs from "@/components/FeaturedDogs";
+import { dogs, getDog } from "@/lib/data/dogs";
 import { shelters } from "@/lib/data/shelters";
 import { testimonials } from "@/lib/data/testimonials";
-import { getDog } from "@/lib/data/dogs";
 
 const STEPS = [
-  { icon: DogIcon, title: "아이 선택", desc: "마음이 가는 아이를 골라요" },
-  { icon: CalendarCheck, title: "시간 선택", desc: "가능한 날짜와 시간을 정해요" },
-  { icon: ClipboardCheck, title: "신청 완료", desc: "간단한 정보만 남기면 끝" },
-  { icon: MapPin, title: "보호소 방문", desc: "예약 시간에 맞춰 방문해요" },
-  { icon: Footprints, title: "산책 활동", desc: "아이와 행복한 한 걸음" },
+  { image: "guide-01-choose.webp", title: "아이 고르기", desc: "성격과 산책 난이도를 보고 나와 맞는 아이를 골라요." },
+  { image: "guide-02-datetime.webp", title: "날짜·시간 신청", desc: "가능한 시간 중에 고르고 간단한 정보만 남기면 돼요." },
+  { image: "guide-03-checkin.webp", title: "보호소 방문", desc: "예약 시간에 맞춰 가면 매니저가 아이를 소개해줘요." },
+  { image: "guide-04-walk.webp", title: "함께 걷기", desc: "산책을 마치고 기록을 남기면 활동 기록에 쌓여요." },
 ];
 
 const REASONS = [
-  {
-    icon: Smile,
-    title: "스트레스 완화",
-    desc: "좁은 견사를 벗어난 산책 한 번이 아이의 하루를 바꿔요.",
-  },
-  {
-    icon: Users,
-    title: "사회화 연습",
-    desc: "다양한 사람을 만나며 세상과 친해지는 연습을 해요.",
-  },
-  {
-    icon: Sun,
-    title: "건강한 운동",
-    desc: "햇볕 아래 걷는 시간은 아이의 몸과 마음을 튼튼하게 해요.",
-  },
-  {
-    icon: HomeIcon,
-    title: "입양 가능성 향상",
-    desc: "산책으로 안정된 아이는 새 가족을 만날 확률이 높아져요.",
-  },
-];
-
-const METRICS = [
-  { icon: HeartHandshake, value: "128", label: "이번 주 산책 매칭" },
-  { icon: Users, value: "1,240+", label: "함께한 봉사자" },
-  { icon: HomeIcon, value: String(shelters.length), label: "참여 보호소" },
-  { icon: Footprints, value: "3,580", label: "누적 산책 완료" },
+  { title: "스트레스가 줄어요", desc: "좁은 견사를 벗어난 한 시간이 아이의 하루를 바꿔요." },
+  { title: "사람과 친해져요", desc: "여러 사람을 만나며 세상에 적응하는 연습을 해요." },
+  { title: "입양 가능성이 높아져요", desc: "산책으로 안정된 아이는 새 가족을 만나기 쉬워요." },
 ];
 
 export default function HomePage() {
-  const featured = dogs
-    .filter((d) => d.availability === "available")
-    .sort((a, b) => Number(b.availableToday) - Number(a.availableToday) || Number(b.recommended) - Number(a.recommended))
-    .slice(0, 6);
   const heroDog = getDog("dog-bori")!;
+  const waiting = dogs.filter((d) => d.availability !== "unavailable").length;
+  const today = dogs.filter((d) => d.availability === "available" && d.availableToday).length;
+  const beginner = dogs.filter(
+    (d) => d.availability !== "unavailable" && d.walkNote.beginnerFriendly
+  ).length;
 
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-sage-50 via-cream-100 to-cream-50">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-tangerine-100/60 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-sage-100/80 blur-3xl"
-        />
-        <div className="container-app relative grid items-center gap-10 py-14 md:grid-cols-2 md:py-20">
-          <div className="animate-fade-up">
-            <div className="mb-4">
-              <MiraeBadge />
-            </div>
-            <p className="section-label">
-              <PawPrint className="h-4 w-4" /> 유기견 산책 매칭 서비스
-            </p>
-            <h1 className="text-3xl font-extrabold leading-[1.25] tracking-tight text-ink-900 sm:text-4xl lg:text-[2.75rem]">
+      <section className="bg-cream-100">
+        <div className="container-app grid items-center gap-10 py-12 md:grid-cols-[1.05fr_1fr] md:gap-14 md:py-20">
+          <div>
+            <p className="section-label">유기견 산책 봉사 매칭</p>
+            <h1 className="text-[32px] font-extrabold leading-[1.25] tracking-tight text-ink-900 sm:text-[40px] lg:text-[46px]">
               산책이 필요한 아이와,
               <br />
-              함께 걸어줄 <span className="text-tangerine-600">당신</span>을
-              <br />
-              연결합니다
+              함께 걸어줄 당신을
+              <br className="hidden sm:block" /> 연결합니다
             </h1>
-            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-500 sm:text-base">
-              가까운 보호소의 유기견과 산책 봉사에 참여해보세요.{" "}
-              <br className="hidden sm:block" />
-              당신의 한 번의 산책이 아이에게 큰 하루가 됩니다.
+            <p className="mt-5 max-w-md text-base leading-relaxed text-ink-500 sm:text-[17px]">
+              가까운 보호소의 유기견과 산책 봉사를 신청해보세요. 처음이어도 보호소가 차근차근
+              안내해드려요.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/dogs" className="btn-primary">
-                <PawPrint className="h-4 w-4" />
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <Link href="/dogs" className="btn-primary btn-lg">
                 산책 가능한 아이들 보기
               </Link>
-              <Link href="/guide" className="btn-secondary">
-                봉사 가이드 보기
+              <Link
+                href="/guide"
+                className="inline-flex min-h-[44px] items-center gap-1 text-[15px] font-semibold text-ink-700 hover:text-ink-900"
+              >
+                처음이라면 봉사 가이드 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <p className="mt-5 flex items-center gap-2 text-sm text-ink-400">
-              <HandHeart className="h-4 w-4 text-sage-500" />
-              처음 봉사하셔도 괜찮아요. 차근차근 안내해드릴게요.
+            <p className="mt-8 text-sm text-ink-400">
+              오늘 산책 가능한 아이 <strong className="tnum font-semibold text-ink-700">{today}마리</strong>
+              <span className="mx-2 text-cream-300">|</span>
+              함께하는 보호소 <strong className="tnum font-semibold text-ink-700">{shelters.length}곳</strong>
             </p>
           </div>
 
-          <div className="relative mx-auto w-full max-w-md animate-fade-up md:max-w-none">
-            <div className="relative overflow-hidden rounded-[28px] border-4 border-white shadow-card-hover">
+          <div className="relative">
+            <div className="overflow-hidden rounded-[24px]">
               <DogImage
                 dog={heroDog}
-                aspect="aspect-[4/3] sm:aspect-[16/11]"
+                aspect="aspect-[4/3] md:aspect-[5/4]"
                 objectPosition="50% 38%"
                 sizes="(max-width: 768px) 100vw, 560px"
                 priority
               />
             </div>
-            {/* 플로팅 카드 */}
-            <div className="absolute -bottom-4 left-3 flex items-center gap-2.5 rounded-2xl bg-white/95 px-4 py-3 shadow-card-hover backdrop-blur sm:left-6">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-tangerine-100 text-tangerine-600">
-                <Heart className="h-4 w-4 fill-tangerine-500 text-tangerine-500" />
+            <Link
+              href={`/dogs/${heroDog.id}`}
+              className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-2xl bg-white/95 px-4 py-3 shadow-card backdrop-blur transition-shadow hover:shadow-card-hover sm:right-auto"
+            >
+              <span>
+                <span className="block text-[15px] font-bold text-ink-900">
+                  {heroDog.name} · {heroDog.age}살 {heroDog.breed}
+                </span>
+                <span className="block text-[13px] text-ink-500">오늘 산책 친구를 기다리고 있어요</span>
               </span>
-              <div className="leading-tight">
-                <p className="text-sm font-bold text-ink-900">보리 · 3살 믹스견</p>
-                <p className="text-xs text-ink-400">오늘 산책 친구를 기다려요</p>
-              </div>
-            </div>
-            <div className="absolute -top-3 right-3 hidden items-center gap-2 rounded-full bg-white/95 px-4 py-2 shadow-card backdrop-blur sm:flex">
-              <Sparkles className="h-4 w-4 text-tangerine-500" />
-              <span className="text-xs font-bold text-ink-700">이번 주 128건 매칭 완료</span>
-            </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-ink-400" />
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* 오늘 산책 가능한 아이들 */}
-      <section className="container-app py-14 md:py-16">
-        <SectionHeading
-          label="🐾 산책 친구 추천"
-          title="오늘 산책 가능한 아이들"
-          subtitle="성격, 크기, 에너지 레벨을 고려해 추천했어요!"
-          moreHref="/dogs"
-        />
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((dog) => (
-            <DogCard key={dog.id} dog={dog} />
-          ))}
-        </div>
-      </section>
+      <FeaturedDogs />
 
-      {/* 참여 방법 */}
-      <section className="bg-sage-50/70 py-14 md:py-16">
+      {/* 참여 방법 — 가이드 사진으로 흐름을 보여줌 */}
+      <section className="border-t border-cream-300/70 bg-white py-14 md:py-20">
         <div className="container-app">
-          <SectionHeading
-            label="참여 방법"
-            title="산책 봉사, 이렇게 참여해요"
-            subtitle="복잡한 절차 없이 5분이면 신청까지 끝나요."
-          />
-          <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {STEPS.map(({ icon: Icon, title, desc }, i) => (
-              <li key={title} className="card relative flex flex-col gap-3 p-5">
-                <span className="absolute right-4 top-4 text-2xl font-extrabold text-cream-300">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-tangerine-100 text-tangerine-600">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <div>
-                  <h3 className="font-bold text-ink-900">{title}</h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-ink-500">{desc}</p>
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="section-title">이렇게 참여해요</h2>
+              <p className="mt-1.5 text-[15px] text-ink-500">신청까지 5분이면 충분해요.</p>
+            </div>
+            <Link
+              href="/guide"
+              className="hidden shrink-0 items-center gap-1 text-[15px] font-semibold text-ink-700 hover:text-ink-900 sm:flex"
+            >
+              봉사 가이드 <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <ol className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4 lg:gap-x-6">
+            {STEPS.map((s, i) => (
+              <li key={s.title}>
+                <div className="relative aspect-[4/3] overflow-hidden rounded-[20px] bg-cream-200">
+                  <Image
+                    src={`/images/guide/${s.image}`}
+                    alt=""
+                    fill
+                    sizes="(max-width: 1024px) 50vw, 280px"
+                    className="object-cover"
+                  />
                 </div>
+                <p className="mt-3 text-[13px] font-semibold text-sage-600">
+                  <span className="tnum">STEP {i + 1}</span>
+                </p>
+                <h3 className="mt-0.5 text-[17px] font-bold text-ink-900">{s.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-ink-500">{s.desc}</p>
               </li>
             ))}
           </ol>
         </div>
       </section>
 
-      {/* 산책이 필요한 이유 */}
-      <section className="container-app py-14 md:py-16">
-        <SectionHeading
-          label="왜 산책일까요?"
-          title="한 번의 산책이 아이의 내일을 바꿔요"
-        />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {REASONS.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="card card-hover flex flex-col gap-3 p-5">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage-100 text-sage-600">
-                <Icon className="h-5 w-5" />
-              </span>
-              <h3 className="font-bold text-ink-900">{title}</h3>
-              <p className="text-sm leading-relaxed text-ink-500">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 활동 지표 */}
-      <section className="bg-gradient-to-r from-sage-600 to-sage-500 py-12 text-white">
-        <div className="container-app grid grid-cols-2 gap-8 lg:grid-cols-4">
-          {METRICS.map(({ icon: Icon, value, label }) => (
-            <div key={label} className="flex flex-col items-center gap-2 text-center">
-              <Icon className="h-6 w-6 text-sage-100" />
-              <p className="text-3xl font-extrabold tracking-tight">{value}</p>
-              <p className="text-sm text-sage-100">{label}</p>
-            </div>
-          ))}
+      {/* 왜 산책인가 + 데이터 */}
+      <section className="bg-sage-800 py-14 text-white md:py-20">
+        <div className="container-app grid gap-12 md:grid-cols-[1.2fr_1fr] md:items-center">
+          <div>
+            <h2 className="text-2xl font-bold leading-snug tracking-tight sm:text-[28px]">
+              한 번의 산책이
+              <br />
+              아이의 내일을 바꿔요
+            </h2>
+            <ul className="mt-8 space-y-5">
+              {REASONS.map((r) => (
+                <li key={r.title} className="border-l-2 border-sage-400 pl-4">
+                  <p className="text-[17px] font-semibold">{r.title}</p>
+                  <p className="mt-0.5 text-[15px] leading-relaxed text-sage-100/80">{r.desc}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <dl className="grid grid-cols-3 gap-4 border-t border-white/15 pt-8 md:grid-cols-1 md:gap-7 md:border-l md:border-t-0 md:pl-12 md:pt-0">
+            {[
+              { value: `${waiting}`, unit: "마리", label: "산책을 기다리는 아이" },
+              { value: `${beginner}`, unit: "마리", label: "초보 봉사자와 걷기 좋은 아이" },
+              { value: `${shelters.length}`, unit: "곳", label: "함께하는 보호소" },
+            ].map((m) => (
+              <div key={m.label} className="flex flex-col-reverse">
+                <dt className="mt-1 text-[13px] leading-snug text-sage-100/75 sm:text-sm">{m.label}</dt>
+                <dd className="tnum text-3xl font-bold md:text-4xl">
+                  {m.value}
+                  <span className="ml-0.5 text-lg font-semibold text-sage-200">{m.unit}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
       {/* 후기 */}
-      <section className="container-app py-14 md:py-16">
-        <SectionHeading
-          label="따뜻한 후기"
-          title="먼저 걸어본 봉사자들의 이야기"
-          moreHref="/guide#faq"
-          moreLabel="봉사 가이드"
-        />
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {testimonials.slice(0, 3).map((t) => (
-            <figure key={t.id} className="card flex flex-col gap-3 p-5">
-              <div className="flex items-center gap-1 text-tangerine-400">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={
-                      i < t.rating
-                        ? "h-4 w-4 fill-tangerine-400"
-                        : "h-4 w-4 text-cream-300"
-                    }
-                  />
-                ))}
-              </div>
-              <blockquote className="text-sm leading-relaxed text-ink-700">
-                “{t.content}”
-              </blockquote>
-              <figcaption className="mt-auto flex items-center gap-2 pt-2 text-[13px] text-ink-400">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sage-100 text-xs font-bold text-sage-600">
-                  {t.author[0]}
-                </span>
-                {t.author}님 · {t.dogName}와의 산책 · {t.region}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA 배너 */}
-      <section className="container-app pb-4">
-        <div className="card grid overflow-hidden md:grid-cols-2">
-          <div className="relative aspect-[16/10] w-full md:aspect-auto md:min-h-[280px]">
-            <Image
-              src="/images/guide/guide-04-walk.webp"
-              alt="봉사자와 강아지가 나란히 산책하는 모습"
-              fill
-              sizes="(max-width: 768px) 100vw, 560px"
-              className="object-cover"
-            />
-          </div>
-          <div className="relative flex flex-col items-start justify-center gap-4 bg-gradient-to-br from-tangerine-500 to-tangerine-400 px-6 py-10 text-white sm:px-10">
-            <PawPrint
-              aria-hidden
-              className="absolute -right-6 -top-6 h-32 w-32 rotate-12 text-white/15"
-            />
-            <div className="relative">
-              <h2 className="text-xl font-extrabold sm:text-2xl">
-                오늘, 한 아이의 산책 친구가 되어주세요.
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-tangerine-50">
-                작은 나눔이 모여 큰 변화를 만듭니다.
-                <br />
-                지금 산책을 기다리는 아이들이 있어요.
-              </p>
-            </div>
-            <Link
-              href="/dogs"
-              className="btn relative shrink-0 bg-white text-tangerine-600 hover:bg-cream-100"
-            >
-              산책 신청해보기
-            </Link>
-          </div>
+      <section className="container-app py-14 md:py-20">
+        <h2 className="section-title">먼저 걸어본 봉사자들</h2>
+        <div className="mt-8 grid gap-10 md:grid-cols-3 md:gap-8">
+          {testimonials.slice(0, 3).map((t) => {
+            const dog = dogs.find((d) => d.name === t.dogName);
+            return (
+              <figure key={t.id} className="flex flex-col">
+                <blockquote className="text-[17px] leading-relaxed text-ink-900">“{t.content}”</blockquote>
+                <figcaption className="mt-4 text-sm text-ink-400">
+                  <span className="font-semibold text-ink-700">{t.author}</span> ·{" "}
+                  {dog ? (
+                    <Link href={`/dogs/${dog.id}`} className="underline-offset-4 hover:underline">
+                      {t.dogName}와 산책
+                    </Link>
+                  ) : (
+                    `${t.dogName}와 산책`
+                  )}{" "}
+                  · {t.region}
+                </figcaption>
+              </figure>
+            );
+          })}
         </div>
       </section>
     </>

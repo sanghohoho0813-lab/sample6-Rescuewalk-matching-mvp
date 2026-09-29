@@ -8,7 +8,7 @@ export default function SheltersPage() {
     <div className="container-app py-8 md:py-10">
       <header className="mb-6">
         <p className="section-label">아이들이 지내는 곳</p>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
           보호소 소개
         </h1>
         <p className="mt-1.5 text-sm text-ink-500">

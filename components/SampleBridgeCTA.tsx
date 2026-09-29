@@ -58,18 +58,10 @@ export default function SampleBridgeCTA({
         className
       )}
     >
-      {/* 배경 디테일 — 은은한 광원 2개와 미세한 그리드 */}
+      {/* 배경 디테일 — AX 톤을 위한 미세한 그리드 하나만 */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-mirae-500/20 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-40 -left-24 h-80 w-80 rounded-full bg-mirae-400/10 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
         style={{
           backgroundImage:
             "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",

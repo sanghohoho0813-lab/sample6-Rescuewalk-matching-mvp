@@ -36,6 +36,27 @@ export function toISODate(d: Date): string {
   ).padStart(2, "0")}`;
 }
 
+/** 오늘 기준 n일 뒤(음수면 이전)의 ISO 날짜 */
+export function daysFromToday(n: number, base = new Date()): string {
+  return toISODate(new Date(base.getFullYear(), base.getMonth(), base.getDate() + n));
+}
+
+/** 두 ISO 날짜의 일수 차이 (b - a) */
+export function diffDays(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
+}
+
+/** 방문일을 "오늘 / 내일 / D-3 / 3일 전" 처럼 짧게 */
+export function relativeDayLabel(iso: string, today = todayISO()): string {
+  const d = diffDays(today, iso);
+  if (d === 0) return "오늘";
+  if (d === 1) return "내일";
+  if (d > 1) return `D-${d}`;
+  return `${-d}일 전`;
+}
+
 /** 오늘부터 14일간의 신청 가능 날짜 목록 */
 export function upcomingDates(count = 14): { iso: string; day: number; weekday: string; isToday: boolean }[] {
   const out = [];
@@ -81,10 +102,11 @@ export const STATUS_STYLE: Record<WalkRequestStatus, string> = {
 export const BADGES: Badge[] = [
   {
     id: "first-walk",
-    label: "첫 산책 완료",
+    label: "첫 산책",
     description: "처음으로 아이와 함께 걸었어요",
     icon: "🐾",
     achieved: (s) => s.totalWalks >= 1,
+    progress: (s) => `${Math.min(s.totalWalks, 1)}/1회`,
   },
   {
     id: "three-walks",
@@ -92,6 +114,7 @@ export const BADGES: Badge[] = [
     description: "산책 봉사 3회를 달성했어요",
     icon: "🌱",
     achieved: (s) => s.totalWalks >= 3,
+    progress: (s) => `${Math.min(s.totalWalks, 3)}/3회`,
   },
   {
     id: "weekend-walker",
@@ -99,13 +122,15 @@ export const BADGES: Badge[] = [
     description: "주말에 산책 봉사에 참여했어요",
     icon: "☀️",
     achieved: (s) => s.weekendWalks >= 1,
+    progress: () => "주말 산책 1회",
   },
   {
     id: "five-friends",
-    label: "5마리 친구 만나기",
+    label: "5마리 친구",
     description: "다섯 아이와 인연을 맺었어요",
     icon: "💛",
     achieved: (s) => s.uniqueDogs >= 5,
+    progress: (s) => `${Math.min(s.uniqueDogs, 5)}/5마리`,
   },
   {
     id: "ten-hours",
@@ -113,6 +138,7 @@ export const BADGES: Badge[] = [
     description: "함께 걸은 시간이 10시간을 넘었어요",
     icon: "⏰",
     achieved: (s) => s.totalMinutes >= 600,
+    progress: (s) => `${Math.floor(Math.min(s.totalMinutes, 600) / 60)}/10시간`,
   },
   {
     id: "ten-walks",
@@ -120,6 +146,7 @@ export const BADGES: Badge[] = [
     description: "산책 봉사 10회를 달성했어요",
     icon: "🏅",
     achieved: (s) => s.totalWalks >= 10,
+    progress: (s) => `${Math.min(s.totalWalks, 10)}/10회`,
   },
 ];
 

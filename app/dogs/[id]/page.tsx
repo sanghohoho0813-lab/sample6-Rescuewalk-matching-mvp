@@ -1,35 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  AlertCircle,
-  Baby,
-  Cake,
-  CheckCircle2,
-  Clock,
-  Dog as DogIcon,
-  Footprints,
-  Heart,
-  MapPin,
-  PawPrint,
-  Phone,
-  Ruler,
-  Scale,
-  Sparkles,
-  Timer,
-  Users,
-} from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronRight } from "lucide-react";
 import DogImage from "@/components/DogImage";
 import FavoriteButton from "@/components/FavoriteButton";
 import EnergyMeter from "@/components/EnergyMeter";
-import Tag, { PersonalityTags } from "@/components/Tag";
+import { PersonalityTags } from "@/components/Tag";
 import DogCard from "@/components/DogCard";
 import StickyApplyBar from "./StickyApplyBar";
 import { dogs, getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
-import { cn, formatTimeKo } from "@/lib/utils";
+import { formatTimeKo } from "@/lib/utils";
 
 export function generateStaticParams() {
   return dogs.map((d) => ({ id: d.id }));
+}
+
+export function generateMetadata({ params }: { params: { id: string } }) {
+  const dog = getDog(params.id);
+  return dog ? { title: `${dog.name} · ${dog.breed}`, description: dog.story } : {};
 }
 
 export default function DogDetailPage({ params }: { params: { id: string } }) {
@@ -37,185 +25,159 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
   if (!dog) notFound();
   const shelter = getShelter(dog.shelterId);
   const unavailable = dog.availability === "unavailable";
-  const friends = dogs
-    .filter((d) => d.shelterId === dog.shelterId && d.id !== dog.id)
-    .slice(0, 3);
+  const friends = dogs.filter((d) => d.shelterId === dog.shelterId && d.id !== dog.id).slice(0, 3);
 
-  const basics = [
-    { icon: Cake, label: "나이", value: `${dog.age}살` },
-    { icon: DogIcon, label: "견종", value: dog.breed },
-    { icon: Ruler, label: "크기", value: `${dog.size}견` },
-    { icon: Scale, label: "체중", value: `${dog.weightKg}kg` },
-    { icon: Heart, label: "성별", value: `${dog.gender}${dog.neutered ? " · 중성화" : ""}` },
-    { icon: Footprints, label: "산책 난이도", value: dog.difficulty },
-  ];
-
-  const walkInfos: { icon: typeof Timer; label: string; value: string; caution?: boolean }[] = [
-    { icon: Timer, label: "추천 산책 시간", value: dog.walkNote.recommendedDuration },
-    { icon: AlertCircle, label: "주의사항", value: dog.walkNote.caution, caution: true },
+  const walkInfo = [
+    { label: "추천 산책 시간", value: dog.walkNote.recommendedDuration },
     {
-      icon: CheckCircle2,
-      label: "리드줄 적응",
+      label: "리드줄",
       value: dog.walkNote.leashTrained ? "리드줄에 잘 적응했어요" : "리드줄 훈련을 진행 중이에요",
     },
-    { icon: Footprints, label: "산책 경험", value: dog.walkNote.walkExperience },
-    { icon: Users, label: "다른 강아지와의 관계", value: dog.walkNote.dogFriendly },
+    { label: "산책 경험", value: dog.walkNote.walkExperience },
+    { label: "다른 강아지", value: dog.walkNote.dogFriendly },
     {
-      icon: Baby,
       label: "아이 동반",
       value: dog.walkNote.kidFriendly ? "아이와 함께 걸어도 무난해요" : "성인 봉사자를 추천해요",
     },
   ];
 
+  const applyPanel = (
+    <>
+      <p className="text-sm font-semibold text-ink-500">가능한 시간</p>
+      {dog.availableTimes.length > 0 ? (
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {dog.availableTimes.map((t) => (
+            <li key={t} className="tnum rounded-lg bg-cream-100 px-2.5 py-1 text-sm text-ink-700">
+              {formatTimeKo(t)}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1.5 text-[15px] text-ink-500">지금은 신청 가능한 시간이 없어요.</p>
+      )}
+      {unavailable ? (
+        <p className="mt-5 rounded-2xl bg-cream-100 p-4 text-center text-[15px] text-ink-500">
+          {dog.name}는 지금 잠시 쉬는 중이에요.
+        </p>
+      ) : (
+        <Link href={`/dogs/${dog.id}/apply`} className="btn-primary btn-lg mt-5 w-full">
+          산책 신청하기
+        </Link>
+      )}
+      <p className="mt-3 text-center text-[13px] text-ink-400">보호소가 확인한 뒤 확정돼요.</p>
+    </>
+  );
+
   return (
     <>
-      <div className="container-app py-6 md:py-10">
-        {/* 브레드크럼 */}
-        <nav className="mb-4 flex items-center gap-1.5 text-[13px] text-ink-400" aria-label="현재 위치">
-          <Link href="/dogs" className="hover:text-tangerine-600">강아지 찾기</Link>
-          <span aria-hidden>›</span>
-          <span className="font-semibold text-ink-700">{dog.name}</span>
-        </nav>
+      <div className="container-app pb-28 pt-4 md:pt-8 lg:pb-10">
+        <Link
+          href="/dogs"
+          className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-full px-2 text-sm font-medium text-ink-500 hover:text-ink-900"
+        >
+          <ArrowLeft className="h-4 w-4" /> 강아지 찾기
+        </Link>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-          {/* 좌측 본문 */}
-          <div className="min-w-0 animate-fade-up">
-            {/* 히어로 이미지 (16:9 슬롯) */}
-            <div className="relative overflow-hidden rounded-[24px] border-4 border-white shadow-card-hover">
+        <div className="mt-2 grid gap-10 lg:grid-cols-[1fr_340px] lg:gap-12">
+          <div className="min-w-0">
+            <div className="relative overflow-hidden rounded-[24px]">
               <DogImage
                 dog={dog}
                 aspect="aspect-[4/3] sm:aspect-[16/10]"
                 objectPosition="50% 34%"
-                sizes="(max-width: 1024px) 100vw, 700px"
+                sizes="(max-width: 1024px) 100vw, 720px"
                 priority
+                className={unavailable ? "grayscale-[35%]" : undefined}
               />
-              <div className="absolute left-4 top-4 flex gap-1.5">
-                {dog.recommended && (
-                  <span className="chip bg-tangerine-500 font-bold text-white shadow-cta">
-                    <Sparkles className="h-3 w-3" /> 추천
-                  </span>
-                )}
-                {dog.availableToday && !unavailable && (
-                  <span className="chip bg-white/95 font-bold text-sage-700 shadow-card">
-                    오늘 산책 가능
-                  </span>
-                )}
-                {unavailable && (
-                  <span className="chip bg-ink-900/70 font-bold text-white">잠시 쉬는 중</span>
-                )}
-              </div>
+              {(unavailable || dog.availableToday) && (
+                <span
+                  className={
+                    unavailable
+                      ? "chip absolute left-4 top-4 bg-ink-900/75 font-semibold text-white"
+                      : "chip absolute left-4 top-4 bg-white/95 font-semibold text-sage-800 shadow-card"
+                  }
+                >
+                  {unavailable ? "잠시 쉬는 중" : "오늘 산책 가능"}
+                </span>
+              )}
               <FavoriteButton dogId={dog.id} dogName={dog.name} className="absolute right-4 top-4" />
             </div>
 
-            {/* 기본 정보 */}
-            <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
-                  {dog.name}
-                  <span className="ml-2 text-base font-medium text-ink-400">
-                    {dog.breed} · {dog.age}살 · {dog.gender}
-                  </span>
-                </h1>
-                <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-500">
-                  <MapPin className="h-4 w-4 text-sage-500" />
-                  {shelter?.name} · {shelter?.region} · {dog.distanceKm}km
-                </p>
-              </div>
-              <EnergyMeter level={dog.energy} showLabel className="mt-1" />
+            {/* 이름과 기본 정보 */}
+            <div className="mt-6">
+              <h1 className="text-[28px] font-bold tracking-tight text-ink-900 sm:text-[32px]">{dog.name}</h1>
+              <p className="mt-1 text-[15px] text-ink-500">
+                {dog.breed} · {dog.age}살 · {dog.gender}
+                {dog.neutered ? "(중성화)" : ""} · <span className="tnum">{dog.weightKg}kg</span>
+              </p>
+              <p className="mt-1 text-[15px] text-ink-500">
+                {shelter?.name} · {shelter?.region} <span className="tnum">{dog.distanceKm}km</span>
+              </p>
+              <PersonalityTags tags={dog.personality} className="mt-4" />
             </div>
 
-            <PersonalityTags tags={dog.personality} className="mt-4" />
-            {dog.walkNote.beginnerFriendly && (
-              <Tag tone="sage" className="mt-2">🌱 초보 봉사자도 괜찮아요</Tag>
-            )}
-
-            {/* 기본 스펙 그리드 */}
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {basics.map(({ icon: Icon, label, value }) => (
-                <div key={label} className="card flex items-center gap-3 p-3.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cream-200 text-sage-600">
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0 leading-tight">
-                    <p className="text-[11px] text-ink-400">{label}</p>
-                    <p className="truncate text-sm font-bold text-ink-900">{value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* 스토리 */}
-            <section className="mt-8">
-              <h2 className="mb-3 text-lg font-extrabold text-ink-900">
-                {dog.name}의 이야기
-              </h2>
-              <div className="card border-l-4 border-l-tangerine-400 p-5">
-                <p className="leading-relaxed text-ink-700">{dog.story}</p>
+            {/* 봉사자 판단에 필요한 핵심 3가지 */}
+            <dl className="mt-6 grid grid-cols-3 divide-x divide-cream-300 border-y border-cream-300 py-4 text-center">
+              <div className="flex flex-col-reverse gap-1 px-2">
+                <dt className="text-[13px] text-ink-400">산책 난이도</dt>
+                <dd className="text-[17px] font-bold text-ink-900">{dog.difficulty}</dd>
               </div>
+              <div className="flex flex-col-reverse gap-1 px-2">
+                <dt className="text-[13px] text-ink-400">에너지</dt>
+                <dd className="flex h-[25.5px] items-center justify-center">
+                  <EnergyMeter level={dog.energy} />
+                </dd>
+              </div>
+              <div className="flex flex-col-reverse gap-1 px-2">
+                <dt className="text-[13px] text-ink-400">초보 봉사자</dt>
+                <dd className="text-[17px] font-bold text-ink-900">
+                  {dog.walkNote.beginnerFriendly ? "괜찮아요" : "경험자 추천"}
+                </dd>
+              </div>
+            </dl>
+
+            <section className="mt-10">
+              <h2 className="text-lg font-bold text-ink-900">{dog.name}의 이야기</h2>
+              <p className="mt-3 text-[17px] leading-[1.75] text-ink-700">{dog.story}</p>
             </section>
 
-            {/* 산책 정보 */}
-            <section className="mt-8">
-              <h2 className="mb-3 text-lg font-extrabold text-ink-900">산책 정보</h2>
-              <ul className="card divide-y divide-cream-200 p-1">
-                {walkInfos.map(({ icon: Icon, label, value, caution }) => (
-                  <li key={label} className="flex items-start gap-3 p-4">
-                    <span
-                      className={cn(
-                        "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
-                        caution ? "bg-tangerine-100 text-tangerine-600" : "bg-sage-100 text-sage-600"
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <p className="text-[13px] font-semibold text-ink-400">{label}</p>
-                      <p className="mt-0.5 text-[15px] leading-relaxed text-ink-900">{value}</p>
-                    </div>
-                  </li>
+            <section className="mt-10">
+              <h2 className="text-lg font-bold text-ink-900">산책 전에 알아두세요</h2>
+              <p className="mt-3 flex gap-2.5 rounded-2xl bg-tangerine-50 p-4 text-[15px] leading-relaxed text-ink-900">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-tangerine-600" aria-hidden />
+                {dog.walkNote.caution}
+              </p>
+              <dl className="mt-2 divide-y divide-cream-200">
+                {walkInfo.map(({ label, value }) => (
+                  <div key={label} className="flex gap-4 py-3.5 text-[15px]">
+                    <dt className="w-28 shrink-0 text-ink-400">{label}</dt>
+                    <dd className="leading-relaxed text-ink-900">{value}</dd>
+                  </div>
                 ))}
-              </ul>
+              </dl>
             </section>
 
-            {/* 보호소 정보 */}
             {shelter && (
-              <section className="mt-8">
-                <h2 className="mb-3 text-lg font-extrabold text-ink-900">보호소 정보</h2>
-                <div className="card p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-extrabold text-ink-900">{shelter.name}</h3>
-                      <p className="mt-1 text-sm leading-relaxed text-ink-500">{shelter.intro}</p>
-                    </div>
-                    <Link
-                      href={`/shelters/${shelter.id}`}
-                      className="btn-secondary shrink-0 !min-h-[38px] px-4 text-[13px]"
-                    >
-                      상세 보기
-                    </Link>
-                  </div>
-                  <ul className="mt-4 space-y-2 text-sm text-ink-500">
-                    <li className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 shrink-0 text-sage-500" /> {shelter.address}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 shrink-0 text-sage-500" /> {shelter.hours}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 shrink-0 text-sage-500" /> {shelter.phone}
-                    </li>
-                  </ul>
-                </div>
+              <section className="mt-10">
+                <h2 className="text-lg font-bold text-ink-900">보호소</h2>
+                <Link
+                  href={`/shelters/${shelter.id}`}
+                  className="mt-3 flex items-center gap-4 border-y border-cream-200 py-4 hover:bg-cream-100/60"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-semibold text-ink-900">{shelter.name}</span>
+                    <span className="mt-0.5 block text-sm text-ink-500">{shelter.address}</span>
+                    <span className="mt-0.5 block text-sm text-ink-500">{shelter.hours}</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-ink-300" aria-hidden />
+                </Link>
               </section>
             )}
 
-            {/* 같은 보호소 친구들 */}
             {friends.length > 0 && (
-              <section className="mt-10">
-                <h2 className="mb-4 text-lg font-extrabold text-ink-900">
-                  {shelter?.name}의 다른 친구들
-                </h2>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <section className="mt-12">
+                <h2 className="text-lg font-bold text-ink-900">{shelter?.name}의 다른 친구들</h2>
+                <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 xl:grid-cols-3">
                   {friends.map((f) => (
                     <DogCard key={f.id} dog={f} />
                   ))}
@@ -224,61 +186,17 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
             )}
           </div>
 
-          {/* 우측 신청 요약 카드 (PC) */}
+          {/* PC: 신청 요약 */}
           <aside className="hidden lg:block">
             <div className="card sticky top-24 p-6">
-              <p className="section-label">
-                <PawPrint className="h-4 w-4" /> 산책 신청
-              </p>
-              <h2 className="text-lg font-extrabold text-ink-900">
-                {dog.name}와 함께 걸어볼까요?
-              </h2>
-              <div className="mt-4 space-y-3 rounded-2xl bg-cream-100 p-4 text-sm">
-                <p className="flex items-center justify-between">
-                  <span className="text-ink-400">산책 난이도</span>
-                  <span className="font-bold text-ink-900">{dog.difficulty}</span>
-                </p>
-                <p className="flex items-center justify-between">
-                  <span className="text-ink-400">추천 시간</span>
-                  <span className="font-bold text-ink-900">{dog.walkNote.recommendedDuration}</span>
-                </p>
-                <p className="flex items-center justify-between">
-                  <span className="text-ink-400">초보 가능</span>
-                  <span className="font-bold text-ink-900">
-                    {dog.walkNote.beginnerFriendly ? "가능해요" : "경험자 추천"}
-                  </span>
-                </p>
-              </div>
-              <div className="mt-4">
-                <p className="mb-2 text-[13px] font-semibold text-ink-400">가능 시간대</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {dog.availableTimes.length > 0 ? (
-                    dog.availableTimes.map((t) => (
-                      <Tag key={t} tone="cream">{formatTimeKo(t)}</Tag>
-                    ))
-                  ) : (
-                    <p className="text-sm text-ink-400">지금은 예약 가능한 시간이 없어요.</p>
-                  )}
-                </div>
-              </div>
-              {unavailable ? (
-                <p className="mt-5 rounded-2xl bg-cream-200 p-4 text-center text-sm font-medium text-ink-500">
-                  {dog.name}는 지금 잠시 쉬는 중이에요. 곧 다시 만나요!
-                </p>
-              ) : (
-                <Link href={`/dogs/${dog.id}/apply`} className="btn-primary mt-5 w-full">
-                  산책 신청하기
-                </Link>
-              )}
-              <p className="mt-3 text-center text-xs text-ink-400">
-                신청 후 보호소 확인을 거쳐 확정돼요.
-              </p>
+              <p className="text-lg font-bold text-ink-900">{dog.name}와 산책하기</p>
+              <p className="mt-1 text-sm text-ink-500">추천 산책 시간 {dog.walkNote.recommendedDuration}</p>
+              <div className="mt-5 border-t border-cream-200 pt-5">{applyPanel}</div>
             </div>
           </aside>
         </div>
       </div>
 
-      {/* 모바일 Sticky CTA */}
       <StickyApplyBar dog={dog} />
     </>
   );

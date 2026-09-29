@@ -13,8 +13,16 @@ const ITEMS = [
   { href: "/me", label: "마이", icon: UserRound, exact: false },
 ];
 
+/**
+ * 하단 내비를 숨기는 화면.
+ * 강아지 상세(하단 고정 신청 버튼)와 신청 5단계(하단 고정 진행 버튼)는
+ * 화면의 주요 행동이 하단에 고정되므로, 고정 바가 두 겹으로 쌓이지 않게 내비를 뺍니다.
+ */
+const HIDE_ON = [/^\/dogs\/[^/]+\/?$/, /^\/dogs\/[^/]+\/apply\/?$/];
+
 export default function MobileNav() {
   const pathname = usePathname();
+  if (HIDE_ON.some((re) => re.test(pathname))) return null;
 
   return (
     <nav
@@ -28,15 +36,13 @@ export default function MobileNav() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200",
-                active ? "text-tangerine-600" : "text-ink-400 hover:text-ink-700"
+                active ? "text-sage-700" : "text-ink-400 hover:text-ink-700"
               )}
             >
-              <Icon
-                className={cn("h-5 w-5 transition-transform duration-200", active && "scale-110")}
-                strokeWidth={active ? 2.4 : 2}
-              />
+              <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.9} />
               {label}
             </Link>
           );

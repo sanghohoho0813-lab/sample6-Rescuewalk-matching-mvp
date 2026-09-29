@@ -1,161 +1,222 @@
 "use client";
 
+import { Suspense, useMemo } from "react";
 import Link from "next/link";
-import { CalendarDays, Clock3, Dog as DogIcon, Footprints, Heart, Timer } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle2 } from "lucide-react";
 import { DogFace } from "@/components/DogImage";
 import EmptyState from "@/components/EmptyState";
+import MyWalkTabs from "@/components/MyWalkTabs";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
 import { BADGES, cn, computeStats, formatDateKo } from "@/lib/utils";
 
-export default function ActivityPage() {
+function formatDuration(totalMinutes: number) {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}분`;
+  return m ? `${h}시간 ${m}분` : `${h}시간`;
+}
+
+function ActivityContent() {
   const { activityLogs, hydrated } = useStore();
-  const stats = computeStats(activityLogs);
-  const hours = Math.floor(stats.totalMinutes / 60);
-  const mins = stats.totalMinutes % 60;
+  const newId = useSearchParams().get("new");
 
-  const metDogs = Array.from(new Set(activityLogs.map((l) => l.dogId)))
-    .map((id) => getDog(id))
-    .filter((d): d is NonNullable<typeof d> => !!d);
+  const logs = useMemo(
+    () => [...activityLogs].sort((a, b) => b.date.localeCompare(a.date)),
+    [activityLogs]
+  );
+  const stats = useMemo(() => computeStats(activityLogs), [activityLogs]);
 
-  const statCards = [
-    { icon: Footprints, label: "총 산책 횟수", value: `${stats.totalWalks}회` },
-    { icon: DogIcon, label: "함께한 강아지", value: `${stats.uniqueDogs}마리` },
-    { icon: Timer, label: "누적 활동 시간", value: mins ? `${hours}시간 ${mins}분` : `${hours}시간` },
-  ];
+  // 방금 기록한 산책으로 새로 열린 배지 (기록 전/후 통계 비교)
+  const newLog = newId ? activityLogs.find((l) => l.id === newId) : undefined;
+  const unlocked = useMemo(() => {
+    if (!newLog) return [];
+    const before = computeStats(activityLogs.filter((l) => l.id !== newLog.id));
+    return BADGES.filter((b) => b.achieved(stats) && !b.achieved(before));
+  }, [newLog, activityLogs, stats]);
+
+  const metDogs = useMemo(
+    () =>
+      Array.from(new Set(logs.map((l) => l.dogId)))
+        .map((id) => getDog(id))
+        .filter((d): d is NonNullable<typeof d> => !!d),
+    [logs]
+  );
+
+  if (!hydrated) {
+    return (
+      <div className="space-y-6" aria-busy="true">
+        <div className="h-24 animate-pulse rounded-[20px] bg-cream-200/70" />
+        <div className="h-40 animate-pulse rounded-[20px] bg-cream-200/70" />
+      </div>
+    );
+  }
+
+  if (logs.length === 0) {
+    return (
+      <EmptyState
+        message={"첫 산책을 시작하면 활동 기록이 쌓여요."}
+        ctaLabel="산책 가능한 아이들 보기"
+        ctaHref="/dogs"
+      />
+    );
+  }
+
+  const newDog = newLog ? getDog(newLog.dogId) : undefined;
 
   return (
-    <div className="container-app max-w-3xl py-8 md:py-10">
-      <header className="mb-6">
-        <p className="section-label">내 활동</p>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
-          활동 기록
-        </h1>
-        <p className="mt-1.5 text-sm text-ink-500">
-          당신의 한 걸음 한 걸음이 아이들의 큰 하루가 되었어요.
-        </p>
-      </header>
-
-      {!hydrated ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="card h-24 animate-pulse bg-cream-100" />
-            ))}
-          </div>
-          <div className="card h-48 animate-pulse bg-cream-100" />
-        </div>
-      ) : activityLogs.length === 0 ? (
-        <EmptyState
-          message={"첫 산책을 시작하면 활동 기록이 쌓여요."}
-          ctaLabel="산책 가능한 아이들 보기"
-          ctaHref="/dogs"
-        />
-      ) : (
-        <>
-          {/* 활동 통계 */}
-          <div className="grid grid-cols-3 gap-3">
-            {statCards.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="card flex flex-col items-center gap-1.5 p-4 text-center sm:p-5">
-                <Icon className="h-5 w-5 text-tangerine-500" />
-                <p className="text-lg font-extrabold text-ink-900 sm:text-2xl">{value}</p>
-                <p className="text-[11px] text-ink-400 sm:text-xs">{label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* 활동 배지 */}
-          <section className="mt-8">
-            <h2 className="mb-3 text-lg font-extrabold text-ink-900">활동 배지</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {BADGES.map((badge) => {
-                const done = badge.achieved(stats);
-                return (
-                  <div
-                    key={badge.id}
-                    className={cn(
-                      "card flex items-center gap-3 p-3.5 transition-all duration-300",
-                      done ? "border-tangerine-200 bg-tangerine-50/70" : "opacity-55 grayscale"
-                    )}
-                  >
-                    <span className="text-2xl" aria-hidden>{badge.icon}</span>
-                    <div className="min-w-0 leading-tight">
-                      <p className="truncate text-sm font-bold text-ink-900">{badge.label}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-ink-400">
-                        {done ? badge.description : "아직 잠겨 있어요"}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* 내가 만난 아이들 */}
-          <section className="mt-8">
-            <h2 className="mb-3 text-lg font-extrabold text-ink-900">내가 만난 아이들</h2>
-            <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
-              {metDogs.map((dog) => (
-                <Link
-                  key={dog.id}
-                  href={`/dogs/${dog.id}`}
-                  className="card card-hover w-28 shrink-0 overflow-hidden text-center"
+    <>
+      {newLog && newDog && (
+        <div
+          role="status"
+          className="mb-8 animate-fade-up rounded-[20px] border border-sage-200 bg-sage-50 p-5 motion-reduce:animate-none"
+        >
+          <p className="flex items-center gap-2 text-[17px] font-bold text-ink-900">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-sage-600" aria-hidden />
+            {newDog.name}와의 산책이 기록됐어요
+          </p>
+          <p className="mt-1 text-[15px] text-ink-700">
+            지금까지 {stats.uniqueDogs}마리의 아이들과 {stats.totalWalks}번 걸었어요.
+          </p>
+          {unlocked.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {unlocked.map((b) => (
+                <span
+                  key={b.id}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink-900 shadow-card"
                 >
-                  <DogFace dog={dog} sizes="112px" />
-                  <p className="truncate px-2 py-2 text-sm font-bold text-ink-900">{dog.name}</p>
-                </Link>
+                  <span aria-hidden>{b.icon}</span> 새 배지 · {b.label}
+                </span>
               ))}
             </div>
-          </section>
-
-          {/* 산책 일지 */}
-          <section className="mt-8">
-            <h2 className="mb-3 text-lg font-extrabold text-ink-900">산책 일지</h2>
-            <ul className="space-y-3">
-              {[...activityLogs]
-                .sort((a, b) => b.date.localeCompare(a.date))
-                .map((log) => {
-                  const dog = getDog(log.dogId);
-                  if (!dog) return null;
-                  const shelter = getShelter(dog.shelterId);
-                  return (
-                    <li key={log.id} className="card flex gap-4 p-4">
-                      <Link
-                        href={`/dogs/${dog.id}`}
-                        className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border-2 border-white shadow-card"
-                        aria-label={`${dog.name} 상세 보기`}
-                      >
-                        <DogFace dog={dog} sizes="56px" />
-                      </Link>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <p className="font-extrabold text-ink-900">{dog.name}</p>
-                          <span className="flex items-center gap-1 text-xs text-ink-400">
-                            <CalendarDays className="h-3.5 w-3.5" /> {formatDateKo(log.date)}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs text-ink-400">
-                            <Clock3 className="h-3.5 w-3.5" /> {log.durationMin}분
-                          </span>
-                          <span className="text-xs text-ink-400">{shelter?.name}</span>
-                        </div>
-                        <p className="mt-1.5 text-sm leading-relaxed text-ink-700">{log.note}</p>
-                      </div>
-                    </li>
-                  );
-                })}
-            </ul>
-          </section>
-
-          <div className="card mt-8 flex items-center gap-3 border-sage-200 bg-sage-50/70 p-5">
-            <Heart className="h-5 w-5 shrink-0 fill-tangerine-400 text-tangerine-400" />
-            <p className="text-sm leading-relaxed text-sage-700">
-              지금까지 <strong>{stats.uniqueDogs}마리</strong>의 아이들과{" "}
-              <strong>{stats.totalWalks}번</strong> 걸었어요. 아이들이 당신을 기억하고 있을 거예요.
-            </p>
-          </div>
-        </>
+          )}
+        </div>
       )}
+
+      {/* 핵심 지표 — 카드 3개 대신 한 줄 */}
+      <dl className="grid grid-cols-3 divide-x divide-cream-300 rounded-[20px] bg-white py-5 shadow-card">
+        {[
+          { label: "산책", value: `${stats.totalWalks}회` },
+          { label: "함께한 아이", value: `${stats.uniqueDogs}마리` },
+          { label: "함께 걸은 시간", value: formatDuration(stats.totalMinutes) },
+        ].map((s) => (
+          <div key={s.label} className="px-3 text-center">
+            <dt className="text-[13px] text-ink-400">{s.label}</dt>
+            <dd className="tnum mt-1 text-xl font-bold text-ink-900 sm:text-2xl">{s.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {/* 배지 */}
+      <section className="mt-10">
+        <h2 className="text-base font-bold text-ink-900">배지</h2>
+        <ul className="mt-4 grid grid-cols-3 gap-y-6 sm:grid-cols-6">
+          {BADGES.map((badge) => {
+            const done = badge.achieved(stats);
+            const fresh = unlocked.some((u) => u.id === badge.id);
+            return (
+              <li key={badge.id} className="flex flex-col items-center text-center">
+                <span
+                  className={cn(
+                    "flex h-14 w-14 items-center justify-center rounded-full text-2xl",
+                    done ? "bg-tangerine-50 ring-1 ring-tangerine-100" : "bg-cream-100 opacity-50 grayscale",
+                    fresh && "ring-2 ring-sage-400"
+                  )}
+                  aria-hidden
+                >
+                  {badge.icon}
+                </span>
+                <span className={cn("mt-2 text-[13px] font-semibold", done ? "text-ink-900" : "text-ink-400")}>
+                  {badge.label}
+                </span>
+                <span className="tnum mt-0.5 text-xs text-ink-400">
+                  {done ? "달성" : badge.progress(stats)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* 만난 아이들 */}
+      <section className="mt-10">
+        <h2 className="text-base font-bold text-ink-900">내가 만난 아이들</h2>
+        <ul className="no-scrollbar -mx-4 mt-4 flex gap-4 overflow-x-auto px-4 pb-1">
+          {metDogs.map((dog) => (
+            <li key={dog.id} className="shrink-0">
+              <Link href={`/dogs/${dog.id}`} className="group flex w-16 flex-col items-center">
+                <span className="h-16 w-16 overflow-hidden rounded-full ring-2 ring-white transition-shadow group-hover:ring-sage-300">
+                  <DogFace dog={dog} sizes="64px" />
+                </span>
+                <span className="mt-1.5 text-[13px] font-medium text-ink-700">{dog.name}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* 산책 일지 */}
+      <section className="mt-10">
+        <h2 className="text-base font-bold text-ink-900">산책 일지</h2>
+        <ul className="mt-3 divide-y divide-cream-200 border-y border-cream-200">
+          {logs.map((log) => {
+            const dog = getDog(log.dogId);
+            if (!dog) return null;
+            const shelter = getShelter(dog.shelterId);
+            const isNew = log.id === newId;
+            const body = (
+              <>
+                <span className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl">
+                  <DogFace dog={dog} sizes="48px" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-bold text-ink-900">{dog.name}</span>
+                    <span className="tnum text-sm text-ink-400">
+                      {formatDateKo(log.date)} · {log.durationMin}분
+                    </span>
+                    {isNew && (
+                      <span className="chip bg-sage-500 font-semibold text-white">새 기록</span>
+                    )}
+                  </span>
+                  {log.note && (
+                    <span className="mt-1 block text-[15px] leading-relaxed text-ink-700">{log.note}</span>
+                  )}
+                  <span className="mt-1 block text-[13px] text-ink-400">{shelter?.name}</span>
+                </span>
+              </>
+            );
+            const cls = cn("flex gap-4 px-1 py-4", isNew && "-mx-3 rounded-2xl bg-sage-50 px-4");
+            return (
+              <li key={log.id}>
+                {log.requestId ? (
+                  <Link href={`/requests/${log.requestId}`} className={cn(cls, "hover:bg-cream-100/60")}>
+                    {body}
+                  </Link>
+                ) : (
+                  <div className={cls}>{body}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </>
+  );
+}
+
+export default function ActivityPage() {
+  return (
+    <div className="container-app max-w-3xl py-8 md:py-10">
+      <h1 className="page-title mb-5 md:hidden">활동 기록</h1>
+      <div className="hidden md:block">
+        <MyWalkTabs />
+      </div>
+      <Suspense fallback={<div className="h-24 animate-pulse rounded-[20px] bg-cream-200/70" />}>
+        <ActivityContent />
+      </Suspense>
     </div>
   );
 }

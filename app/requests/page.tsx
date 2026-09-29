@@ -2,17 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, Clock, MapPin } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { DogFace } from "@/components/DogImage";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
+import MyWalkTabs from "@/components/MyWalkTabs";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
-import { cn, formatDateKo, formatTimeKo } from "@/lib/utils";
-import type { WalkRequestStatus } from "@/lib/types";
+import { cn, formatDateKo, formatTimeKo, relativeDayLabel, todayISO } from "@/lib/utils";
+import type { WalkRequest, WalkRequestStatus } from "@/lib/types";
 
-const FILTER_TABS: { key: WalkRequestStatus | "all"; label: string }[] = [
+const FILTERS: { key: WalkRequestStatus | "all"; label: string }[] = [
   { key: "all", label: "전체" },
   { key: "pending", label: "신청완료" },
   { key: "confirmed", label: "방문예정" },
@@ -20,124 +21,169 @@ const FILTER_TABS: { key: WalkRequestStatus | "all"; label: string }[] = [
   { key: "cancelled", label: "취소" },
 ];
 
-export default function RequestsPage() {
-  const { requests, hydrated, cancelRequest, showToast } = useStore();
-  const [tab, setTab] = useState<WalkRequestStatus | "all">("all");
+const isActive = (r: WalkRequest) => r.status === "pending" || r.status === "confirmed";
 
-  const list = useMemo(() => {
-    const filtered = tab === "all" ? requests : requests.filter((r) => r.status === tab);
-    return [...filtered].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [requests, tab]);
+function RequestRow({ req, today }: { req: WalkRequest; today: string }) {
+  const dog = getDog(req.dogId);
+  if (!dog) return null;
+  const shelter = getShelter(dog.shelterId);
+  const upcoming = isActive(req) && req.date >= today;
+  return (
+    <li>
+      <Link
+        href={`/requests/${req.id}`}
+        className={cn(
+          "card card-hover flex items-center gap-4 p-4",
+          req.status === "cancelled" && "bg-cream-50 shadow-none"
+        )}
+      >
+        <span
+          className={cn(
+            "h-14 w-14 shrink-0 overflow-hidden rounded-2xl",
+            req.status === "cancelled" && "opacity-60 grayscale"
+          )}
+        >
+          <DogFace dog={dog} sizes="56px" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="truncate text-base font-bold text-ink-900">{dog.name}</span>
+            <StatusBadge status={req.status} />
+          </span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-ink-500">
+            <span className="tnum">
+              {formatDateKo(req.date)} {formatTimeKo(req.time)}
+            </span>
+            {upcoming && (
+              <span className="tnum font-semibold text-sage-700">{relativeDayLabel(req.date, today)}</span>
+            )}
+          </span>
+          <span className="mt-0.5 block truncate text-sm text-ink-400">{shelter?.name}</span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-ink-300" aria-hidden />
+      </Link>
+    </li>
+  );
+}
+
+export default function RequestsPage() {
+  const { requests, hydrated } = useStore();
+  const [filter, setFilter] = useState<WalkRequestStatus | "all">("all");
+  const today = todayISO();
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: requests.length };
+    for (const r of requests) c[r.status] = (c[r.status] ?? 0) + 1;
+    return c;
+  }, [requests]);
+
+  // 예정된 산책은 가까운 날짜부터, 지난 신청은 최근 날짜부터
+  const upcoming = useMemo(
+    () =>
+      requests
+        .filter(isActive)
+        .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)),
+    [requests]
+  );
+  const past = useMemo(
+    () =>
+      requests
+        .filter((r) => !isActive(r))
+        .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)),
+    [requests]
+  );
+  const filtered = useMemo(
+    () => (filter === "all" ? [] : [...upcoming, ...past].filter((r) => r.status === filter)),
+    [filter, upcoming, past]
+  );
 
   return (
     <div className="container-app max-w-3xl py-8 md:py-10">
-      <header className="mb-6">
-        <p className="section-label">내 활동</p>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
-          신청 내역
-        </h1>
-      </header>
+      <h1 className="page-title mb-5 md:hidden">신청 내역</h1>
+      <div className="hidden md:block">
+        <MyWalkTabs />
+      </div>
 
-      <div className="no-scrollbar mb-6 flex gap-2 overflow-x-auto pb-1">
-        {FILTER_TABS.map((t) => (
+      <div className="no-scrollbar -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1">
+        {FILTERS.map((f) => (
           <button
-            key={t.key}
+            key={f.key}
             type="button"
-            onClick={() => setTab(t.key)}
+            onClick={() => setFilter(f.key)}
+            aria-pressed={filter === f.key}
             className={cn(
-              "shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200",
-              tab === t.key
-                ? "bg-sage-600 text-white"
-                : "bg-white text-ink-500 shadow-card hover:bg-cream-200"
+              "flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors",
+              filter === f.key
+                ? "border-ink-900 bg-ink-900 text-white"
+                : "border-cream-300 bg-white text-ink-500 hover:text-ink-900"
             )}
           >
-            {t.label}
+            {f.label}
+            {hydrated && (
+              <span className={cn("tnum text-xs", filter === f.key ? "text-white/70" : "text-ink-300")}>
+                {counts[f.key] ?? 0}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {!hydrated ? (
-        <div className="space-y-4">
+        <div className="space-y-3" aria-busy="true">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="card h-32 animate-pulse bg-cream-100" />
+            <div key={i} className="h-[92px] animate-pulse rounded-[20px] bg-cream-200/70" />
           ))}
         </div>
-      ) : list.length === 0 ? (
+      ) : requests.length === 0 ? (
         <EmptyState
           message={"아직 신청한 산책이 없어요.\n오늘 한 번 시작해볼까요?"}
           ctaLabel="산책 가능한 아이들 보기"
           ctaHref="/dogs"
         />
+      ) : filter !== "all" ? (
+        filtered.length === 0 ? (
+          <p className="py-16 text-center text-[15px] text-ink-400">해당하는 신청이 없어요.</p>
+        ) : (
+          <ul className="space-y-3">
+            {filtered.map((r) => (
+              <RequestRow key={r.id} req={r} today={today} />
+            ))}
+          </ul>
+        )
       ) : (
-        <ul className="space-y-4">
-          {list.map((req) => {
-            const dog = getDog(req.dogId);
-            if (!dog) return null;
-            const shelter = getShelter(dog.shelterId);
-            const cancellable = req.status === "pending" || req.status === "confirmed";
-            return (
-              <li key={req.id} className="card card-hover overflow-hidden">
-                <div className="flex items-start gap-4 p-4 sm:p-5">
-                  <Link
-                    href={`/dogs/${dog.id}`}
-                    className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-2 border-white shadow-card sm:h-20 sm:w-20"
-                    aria-label={`${dog.name} 상세 보기`}
-                  >
-                    <DogFace dog={dog} sizes="80px" />
-                  </Link>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate font-extrabold text-ink-900">
-                        {dog.name}
-                        <span className="ml-1.5 text-[13px] font-medium text-ink-400">
-                          {dog.breed}
-                        </span>
-                      </p>
-                      <StatusBadge status={req.status} />
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink-500">
-                      <span className="flex items-center gap-1">
-                        <CalendarDays className="h-3.5 w-3.5 text-sage-500" />
-                        {formatDateKo(req.date)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5 text-sage-500" />
-                        {formatTimeKo(req.time)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5 text-sage-500" />
-                        {shelter?.name}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 font-mono text-[11px] tracking-wider text-ink-300">
-                      {req.reservationNo}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-end gap-2 border-t border-cream-200 bg-cream-100/60 px-4 py-2.5">
-                  {cancellable && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        cancelRequest(req.id);
-                        showToast("산책 신청을 취소했어요.", "😢");
-                      }}
-                      className="btn-ghost !min-h-[36px] px-3 text-[13px]"
-                    >
-                      신청 취소
-                    </button>
-                  )}
-                  <Link
-                    href={req.status === "completed" ? "/activity" : `/complete/${req.id}`}
-                    className="btn-secondary !min-h-[36px] px-4 text-[13px]"
-                  >
-                    {req.status === "completed" ? "활동 기록 보기" : "상세 보기"}
-                  </Link>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="space-y-10">
+          <section>
+            <h2 className="mb-3 text-sm font-semibold text-ink-500">
+              예정된 산책 <span className="tnum text-ink-300">{upcoming.length}</span>
+            </h2>
+            {upcoming.length === 0 ? (
+              <div className="rounded-[20px] border border-dashed border-cream-300 px-5 py-8 text-center">
+                <p className="text-[15px] text-ink-500">예정된 산책이 없어요.</p>
+                <Link href="/dogs" className="btn-primary mt-4">
+                  산책 가능한 아이들 보기
+                </Link>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {upcoming.map((r) => (
+                  <RequestRow key={r.id} req={r} today={today} />
+                ))}
+              </ul>
+            )}
+          </section>
+          {past.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-sm font-semibold text-ink-500">
+                지난 신청 <span className="tnum text-ink-300">{past.length}</span>
+              </h2>
+              <ul className="space-y-3">
+                {past.map((r) => (
+                  <RequestRow key={r.id} req={r} today={today} />
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
       )}
     </div>
   );

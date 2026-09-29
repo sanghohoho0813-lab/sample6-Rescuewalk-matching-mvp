@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import DogCard from "@/components/DogCard";
 import EmptyState from "@/components/EmptyState";
@@ -104,8 +104,8 @@ function FilterChip({
       className={cn(
         "min-h-[38px] rounded-full border px-3.5 text-[13px] font-medium transition-all duration-200",
         active
-          ? "border-tangerine-500 bg-tangerine-500 text-white shadow-cta"
-          : "border-cream-300 bg-white text-ink-500 hover:border-tangerine-300 hover:text-ink-900"
+          ? "border-sage-600 bg-sage-600 text-white"
+          : "border-cream-300 bg-white text-ink-500 hover:border-sage-300 hover:text-ink-900"
       )}
     >
       {children}
@@ -233,39 +233,63 @@ export default function DogsPage() {
     [filters, sort]
   );
 
+  // 모바일 필터 시트: 열려 있는 동안 배경 스크롤 잠금 + Esc 로 닫기
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [drawerOpen]);
+
   return (
     <div className="container-app py-8 md:py-10">
       <header className="mb-6">
-        <p className="section-label">산책을 기다리는 아이들이 있어요</p>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl">
-          강아지 찾기
-        </h1>
-        <p className="mt-1.5 text-sm text-ink-500">
-          총 <strong className="text-tangerine-600">{result.length}마리</strong>의 아이들이
-          산책 친구를 기다리고 있어요.
+        <h1 className="page-title">강아지 찾기</h1>
+        <p className="mt-1.5 text-[15px] text-ink-500" aria-live="polite">
+          {activeCount > 0 ? "조건에 맞는 아이 " : "산책 친구를 기다리는 아이 "}
+          <strong className="tnum font-semibold text-ink-900">{result.length}마리</strong>
         </p>
       </header>
 
       {/* 모바일: 필터 버튼 + 정렬 */}
-      <div className="mb-5 flex items-center justify-between gap-3 lg:hidden">
+      <div className="mb-6 flex items-center gap-2 lg:hidden">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="btn-secondary text-sm"
+          className="btn-secondary shrink-0 whitespace-nowrap !px-4 text-sm"
         >
           <SlidersHorizontal className="h-4 w-4" />
           필터
           {activeCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-tangerine-500 text-[11px] font-bold text-white">
+            <span className="tnum flex h-5 min-w-5 items-center justify-center rounded-full bg-ink-900 px-1 text-xs font-bold text-white">
               {activeCount}
             </span>
           )}
         </button>
+        <button
+          type="button"
+          aria-pressed={filters.todayOnly}
+          onClick={() => setFilters((f) => ({ ...f, todayOnly: !f.todayOnly }))}
+          className={cn(
+            "btn shrink-0 whitespace-nowrap !px-4 text-sm",
+            filters.todayOnly
+              ? "border border-sage-600 bg-sage-600 text-white"
+              : "border border-cream-300 bg-white text-ink-700"
+          )}
+        >
+          오늘 가능
+        </button>
+        <span className="flex-1" />
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
           aria-label="정렬"
-          className="min-h-[44px] rounded-full border border-cream-300 bg-white px-4 text-sm font-medium text-ink-700 focus:border-tangerine-400 focus:outline-none"
+          className="min-h-[44px] rounded-full border border-cream-300 bg-white px-3 text-sm font-medium text-ink-700 focus:border-sage-400 focus:outline-none"
         >
           {SORTS.map((s) => (
             <option key={s.key} value={s.key}>
@@ -285,7 +309,7 @@ export default function DogsPage() {
                 <button
                   type="button"
                   onClick={() => setFilters(EMPTY_FILTERS)}
-                  className="flex items-center gap-1 text-xs font-semibold text-ink-400 hover:text-tangerine-600"
+                  className="flex min-h-[32px] items-center gap-1 text-[13px] font-semibold text-ink-400 hover:text-ink-900"
                 >
                   <RotateCcw className="h-3 w-3" /> 초기화
                 </button>
@@ -303,11 +327,12 @@ export default function DogsPage() {
                 key={s.key}
                 type="button"
                 onClick={() => setSort(s.key)}
+                aria-pressed={sort === s.key}
                 className={cn(
-                  "rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200",
+                  "min-h-[40px] rounded-full border px-4 text-sm font-semibold transition-colors duration-200",
                   sort === s.key
-                    ? "bg-sage-600 text-white"
-                    : "bg-white text-ink-500 hover:bg-cream-200"
+                    ? "border-ink-900 bg-ink-900 text-white"
+                    : "border-cream-300 bg-white text-ink-500 hover:text-ink-900"
                 )}
               >
                 {s.label}
@@ -319,12 +344,12 @@ export default function DogsPage() {
             <EmptyState
               message={"조건에 맞는 아이를 찾지 못했어요.\n필터를 조금만 넓혀볼까요?"}
               ctaLabel="필터 초기화"
-              ctaHref="/dogs"
+              onAction={() => setFilters(EMPTY_FILTERS)}
             />
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {result.map((dog) => (
-                <DogCard key={dog.id} dog={dog} />
+            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+              {result.map((dog, i) => (
+                <DogCard key={dog.id} dog={dog} priority={i < 2} />
               ))}
             </div>
           )}
@@ -343,7 +368,7 @@ export default function DogsPage() {
           <div className="absolute inset-x-0 bottom-0 max-h-[82vh] animate-slide-up overflow-y-auto rounded-t-[24px] bg-cream-50 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-cream-300" />
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-extrabold text-ink-900">필터</h2>
+              <h2 className="text-lg font-bold text-ink-900">필터</h2>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}

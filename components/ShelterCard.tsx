@@ -26,7 +26,7 @@ export default function ShelterCard({ shelter }: { shelter: Shelter }) {
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="text-lg font-extrabold text-ink-900 transition-colors group-hover:text-tangerine-600">
+        <h3 className="text-lg font-bold text-ink-900 transition-colors group-hover:text-sage-700">
           {shelter.name}
         </h3>
         <p className="text-sm leading-relaxed text-ink-500">{shelter.intro}</p>

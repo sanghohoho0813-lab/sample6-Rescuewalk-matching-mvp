@@ -73,11 +73,17 @@ export interface WalkRequest {
   };
   status: WalkRequestStatus;
   createdAt: string;
+  /** 상태 전이 시각 — 상세 화면의 진행 타임라인에 사용 */
+  confirmedAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
 }
 
 export interface ActivityLog {
   id: string;
   dogId: string;
+  /** 이 기록을 만든 산책 신청. 시드의 오래된 기록에는 없을 수 있음 */
+  requestId?: string;
   date: string;
   durationMin: number;
   note: string;
@@ -99,6 +105,8 @@ export interface Badge {
   description: string;
   icon: string;
   achieved: (stats: ActivityStats) => boolean;
+  /** 잠긴 배지에 보여줄 진행도 (예: "4/5마리") */
+  progress: (stats: ActivityStats) => string;
 }
 
 export interface ActivityStats {
