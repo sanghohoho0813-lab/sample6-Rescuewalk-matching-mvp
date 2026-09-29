@@ -6,6 +6,7 @@ import MobileNav from "@/components/MobileNav";
 import Footer from "@/components/Footer";
 import SampleBridgeSlot from "@/components/SampleBridgeSlot";
 import Toast from "@/components/Toast";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: {
@@ -47,6 +48,8 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans">
+        {/* 미래AI랩 데모 공용 뒤로·앞으로 버튼 */}
+        <Script src="/mirae-history-nav.js" strategy="beforeInteractive" />
         <StoreProvider>
           <Header />
           <main className="min-h-[70vh] pb-10 md:pb-0">{children}</main>
