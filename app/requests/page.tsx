@@ -79,17 +79,12 @@ export default function RequestsPage() {
 
   // 예정된 산책은 가까운 날짜부터, 지난 신청은 최근 날짜부터
   const upcoming = useMemo(
-    () =>
-      requests
-        .filter(isActive)
-        .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)),
+    () => requests.filter(isActive).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)),
     [requests]
   );
   const past = useMemo(
     () =>
-      requests
-        .filter((r) => !isActive(r))
-        .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)),
+      requests.filter((r) => !isActive(r)).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)),
     [requests]
   );
   const filtered = useMemo(
@@ -104,29 +99,35 @@ export default function RequestsPage() {
         <MyWalkTabs />
       </div>
 
-      <div className="no-scrollbar -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            onClick={() => setFilter(f.key)}
-            aria-pressed={filter === f.key}
-            className={cn(
-              "flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors",
-              filter === f.key
-                ? "border-ink-900 bg-ink-900 text-white"
-                : "border-cream-300 bg-white text-ink-500 hover:text-ink-900"
-            )}
-          >
-            {f.label}
-            {hydrated && (
-              <span className={cn("tnum text-[13px]", filter === f.key ? "text-white/70" : "text-ink-300")}>
-                {counts[f.key] ?? 0}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      {/* 신청이 하나도 없을 때는 0만 나열된 필터 대신 빈 상태 안내만 보여줍니다 */}
+      {!(hydrated && requests.length === 0) && (
+        <div className="no-scrollbar -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1">
+          {/* 해당 건이 없는 상태는 고를 이유가 없으므로 숨깁니다(선택 중인 것은 유지) */}
+          {FILTERS.filter(
+            (f) => !hydrated || f.key === "all" || f.key === filter || (counts[f.key] ?? 0) > 0
+          ).map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              aria-pressed={filter === f.key}
+              className={cn(
+                "flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors",
+                filter === f.key
+                  ? "border-ink-900 bg-ink-900 text-white"
+                  : "border-cream-300 bg-white text-ink-500 hover:text-ink-900"
+              )}
+            >
+              {f.label}
+              {hydrated && (
+                <span className={cn("tnum text-[13px]", filter === f.key ? "text-white/70" : "text-ink-300")}>
+                  {counts[f.key] ?? 0}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!hydrated ? (
         <div className="space-y-3" aria-busy="true">

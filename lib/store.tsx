@@ -13,6 +13,7 @@ import {
 import type { ActivityLog, WalkRequest } from "@/lib/types";
 import { SEED_FAVORITES, SEED_INTEREST_REGIONS, buildSeed } from "@/lib/data/seed";
 import { todayISO } from "@/lib/utils";
+import { getDog } from "@/lib/data/dogs";
 
 /**
  * 데모용 클라이언트 스토어.
@@ -69,6 +70,41 @@ function freshState(): PersistedState {
   };
 }
 
+// 저장값은 사용자가 직접 고치거나 이전 버전이 남긴 것일 수 있으므로, 화면이 깨지지 않게 형태를 확인하고 씁니다
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+const isStr = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+const STATUSES = new Set(["pending", "confirmed", "completed", "cancelled"]);
+
+function validRequest(v: unknown): v is WalkRequest {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isStr(v.dogId) &&
+    !!getDog(v.dogId) &&
+    isStr(v.date) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(v.date) &&
+    isStr(v.time) &&
+    STATUSES.has(v.status as string) &&
+    isObj(v.applicant) &&
+    typeof v.applicant.name === "string" &&
+    typeof v.applicant.phone === "string"
+  );
+}
+
+function validLog(v: unknown): v is ActivityLog {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isStr(v.dogId) &&
+    !!getDog(v.dogId) &&
+    isStr(v.date) &&
+    typeof v.durationMin === "number" &&
+    v.durationMin > 0
+  );
+}
+
+const strings = (v: unknown): string[] | null => (Array.isArray(v) ? v.filter(isStr) : null);
+
 function loadPersisted(): PersistedState {
   try {
     const raw = window.localStorage.getItem(LS_KEY);
@@ -76,12 +112,17 @@ function loadPersisted(): PersistedState {
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
     const fallback = freshState();
     return {
-      favorites: Array.isArray(parsed.favorites) ? parsed.favorites : fallback.favorites,
-      requests: Array.isArray(parsed.requests) ? parsed.requests : fallback.requests,
-      activityLogs: Array.isArray(parsed.activityLogs) ? parsed.activityLogs : fallback.activityLogs,
-      interestRegions: Array.isArray(parsed.interestRegions)
-        ? parsed.interestRegions
-        : fallback.interestRegions,
+      favorites: strings(parsed.favorites)?.filter((id) => !!getDog(id)) ?? fallback.favorites,
+      requests: Array.isArray(parsed.requests)
+        ? parsed.requests.filter(validRequest).map((r) => ({
+            ...r,
+            applicant: { ...r.applicant, memo: r.applicant.memo ?? "", experienced: !!r.applicant.experienced },
+          }))
+        : fallback.requests,
+      activityLogs: Array.isArray(parsed.activityLogs)
+        ? parsed.activityLogs.filter(validLog).map((l) => ({ ...l, note: typeof l.note === "string" ? l.note : "" }))
+        : fallback.activityLogs,
+      interestRegions: strings(parsed.interestRegions) ?? fallback.interestRegions,
     };
   } catch {
     return freshState();

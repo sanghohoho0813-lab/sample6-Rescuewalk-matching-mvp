@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, ChevronRight } from "lucide-react";
@@ -6,10 +7,11 @@ import FavoriteButton from "@/components/FavoriteButton";
 import { PersonalityTags } from "@/components/Tag";
 import DogCard from "@/components/DogCard";
 import BackToDogs from "@/components/BackToDogs";
+import DogRail from "@/components/DogRail";
 import StickyApplyBar from "./StickyApplyBar";
 import { dogs, getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
-import { energyLabel, formatTimeKo, withJosa } from "@/lib/utils";
+import { cn, energyLabel, formatTimeKo, withJosa } from "@/lib/utils";
 
 export function generateStaticParams() {
   return dogs.map((d) => ({ id: d.id }));
@@ -27,7 +29,25 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
   const unavailable = dog.availability === "unavailable";
   const friends = dogs.filter((d) => d.shelterId === dog.shelterId && d.id !== dog.id).slice(0, 3);
 
-  const walkInfo = [
+  const walkInfo: { label: string; value: React.ReactNode; mobileOnly?: boolean }[] = [
+    // PC 는 오른쪽 신청 패널에 시간이 있으므로 모바일에서만
+    ...(dog.availableTimes.length > 0 && !unavailable
+      ? [
+          {
+            label: "가능한 시간",
+            // 시간 하나가 '오전 / 11:00' 처럼 줄 끝에서 갈라지지 않게 항목별로 묶습니다
+            value: dog.availableTimes.map((t, i) => (
+              <Fragment key={t}>
+                <span className="whitespace-nowrap tabular-nums">
+                  {formatTimeKo(t)}
+                  {i < dog.availableTimes.length - 1 ? "," : ""}
+                </span>{" "}
+              </Fragment>
+            )),
+            mobileOnly: true,
+          },
+        ]
+      : []),
     { label: "추천 산책 시간", value: dog.walkNote.recommendedDuration },
     {
       label: "리드줄",
@@ -73,7 +93,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
       <div className="container-app pb-28 pt-4 md:pt-8 lg:pb-10">
         <BackToDogs />
 
-        <div className="mt-2 grid gap-10 lg:grid-cols-[1fr_340px] lg:gap-12">
+        <div className="mt-2 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
           <div className="min-w-0">
             <div className="relative overflow-hidden rounded-[24px]">
               <DogImage
@@ -141,8 +161,8 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
                 {dog.walkNote.caution}
               </p>
               <dl className="mt-2 divide-y divide-cream-200">
-                {walkInfo.map(({ label, value }) => (
-                  <div key={label} className="flex gap-4 py-3.5 text-[15px]">
+                {walkInfo.map(({ label, value, mobileOnly }) => (
+                  <div key={label} className={cn("flex gap-4 py-3.5 text-[15px]", mobileOnly && "lg:hidden")}>
                     <dt className="w-28 shrink-0 text-ink-400">{label}</dt>
                     <dd className="leading-relaxed text-ink-900">{value}</dd>
                   </div>
@@ -170,10 +190,12 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
             {friends.length > 0 && (
               <section className="mt-12">
                 <h2 className="text-lg font-bold text-ink-900">{shelter?.name}의 다른 친구들</h2>
-                <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 xl:grid-cols-3">
-                  {friends.map((f) => (
-                    <DogCard key={f.id} dog={f} />
-                  ))}
+                <div className="mt-5">
+                  <DogRail wideCols="xl:grid-cols-3" label={`${shelter?.name}의 다른 친구들`}>
+                    {friends.map((f) => (
+                      <DogCard key={f.id} dog={f} />
+                    ))}
+                  </DogRail>
                 </div>
               </section>
             )}

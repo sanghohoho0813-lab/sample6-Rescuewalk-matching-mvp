@@ -229,7 +229,7 @@ export default function RequestDetailPage() {
         <ArrowLeft className="h-4 w-4" /> 신청 내역
       </Link>
 
-      <div className="mt-2 grid gap-8 lg:grid-cols-[1fr_340px] lg:gap-12">
+      <div className="mt-2 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
         <div className="min-w-0">
           {/* 대상 */}
           <div className="flex items-center gap-4">

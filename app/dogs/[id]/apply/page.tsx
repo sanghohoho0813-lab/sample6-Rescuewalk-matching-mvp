@@ -62,6 +62,8 @@ interface Draft {
 }
 
 const draftKey = (dogId: string) => `rw:apply:${dogId}`;
+/** 신청을 마친 뒤 브라우저 뒤로가기로 신청 화면에 돌아온 경우를 알아채기 위한 표시 */
+const appliedKey = (dogId: string) => `rw:applied:${dogId}`;
 
 function readDraft(dogId: string): Partial<Draft> | null {
   try {
@@ -83,7 +85,7 @@ function ApplyFlow() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const dog = getDog(params.id);
-  const { requests, addRequest, showToast, hydrated } = useStore();
+  const { requests, addRequest, hydrated } = useStore();
 
   const [date, setDate] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
@@ -95,11 +97,17 @@ function ApplyFlow() {
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [restored, setRestored] = useState(false);
+  const [appliedId, setAppliedId] = useState<string | null>(null);
   const submittedRef = useRef(false);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
 
   const dates = useMemo(() => upcomingDates(14), []);
+
+  useEffect(() => () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+  }, []);
 
   // 같은 아이의 같은 날·시간에 이미 신청해 둔 슬롯
   const bookedByDate = useMemo(() => {
@@ -121,6 +129,17 @@ function ApplyFlow() {
   // 임시 저장값 복원 — 신청 내역을 읽은 뒤에 해야 이미 찬 시간을 걸러낼 수 있습니다
   useEffect(() => {
     if (!dog || !hydrated || restored) return;
+    try {
+      const applied = sessionStorage.getItem(appliedKey(dog.id));
+      const midFlow = Number(searchParams.get("step")) > 1;
+      if (applied && midFlow && requests.some((r) => r.id === applied && r.status !== "cancelled")) {
+        setAppliedId(applied);
+      } else if (applied) {
+        sessionStorage.removeItem(appliedKey(dog.id));
+      }
+    } catch {
+      /* 무시 */
+    }
     const d = readDraft(dog.id);
     if (d) {
       const dateOk =
@@ -160,10 +179,10 @@ function ApplyFlow() {
   const step = restored ? Math.min(urlStep, maxStep) : 0;
 
   useEffect(() => {
-    if (restored && urlStep > maxStep) {
+    if (restored && !appliedId && urlStep > maxStep) {
       window.history.replaceState(window.history.state, "", `${pathname}?step=${maxStep + 1}`);
     }
-  }, [restored, urlStep, maxStep, pathname]);
+  }, [restored, appliedId, urlStep, maxStep, pathname]);
 
   if (!dog) notFound();
   const shelter = getShelter(dog.shelterId);
@@ -180,6 +199,43 @@ function ApplyFlow() {
     );
   }
 
+  // 신청을 마친 뒤 뒤로가기로 돌아왔다면, 빈 신청서 대신 '이미 신청했어요'를 보여줘 중복 신청을 막습니다
+  const appliedReq = appliedId ? requests.find((r) => r.id === appliedId) : undefined;
+  if (appliedReq) {
+    return (
+      <div className="container-app max-w-lg py-14 text-center md:py-20">
+        <span className="mx-auto block h-16 w-16 overflow-hidden rounded-full">
+          <DogFace dog={dog} sizes="64px" />
+        </span>
+        <h1 className="mt-5 text-xl font-bold text-ink-900">{withJosa(dog.name, "와")}의 산책은 이미 신청했어요</h1>
+        <p className="mt-2 text-[15px] text-ink-500">
+          <span className="tnum">{formatDateKo(appliedReq.date)}</span>{" "}
+          <span className="tnum">{formatTimeKo(appliedReq.time)}</span>
+        </p>
+        <div className="mx-auto mt-8 flex max-w-xs flex-col gap-2.5">
+          <Link href={`/requests/${appliedReq.id}`} className="btn-primary btn-lg w-full">
+            신청 내역 보기
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                sessionStorage.removeItem(appliedKey(dog.id));
+              } catch {
+                /* 무시 */
+              }
+              setAppliedId(null);
+              window.history.replaceState(window.history.state, "", `${pathname}?step=1`);
+            }}
+            className="btn-secondary btn-lg w-full"
+          >
+            다른 날짜로 또 신청하기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const stepReady = [!!date, !!time, true, allAgreed, true][step];
   const hint = ["산책할 날짜를 선택해주세요", "시간을 선택해주세요", null, "모든 항목을 확인해주세요", null][
     step
@@ -187,8 +243,18 @@ function ApplyFlow() {
 
   // 앞으로 가는 이동은 기록을 쌓고(rwPrev = 직전 단계), '이전'은 그 기록을 되돌립니다
   const goTo = (n: number) => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
     window.history.pushState({ rwPrev: step }, "", `${pathname}?step=${n + 1}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // 날짜·시간은 고르는 순간 다음 단계로 — 고른 표시가 잠깐 보이도록 짧게 기다립니다
+  const advanceSoon = (from: number) => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(() => {
+      window.history.pushState({ rwPrev: from }, "", `${pathname}?step=${from + 2}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 260);
   };
 
   const goPrev = () => {
@@ -235,10 +301,10 @@ function ApplyFlow() {
       addRequest(req);
       try {
         sessionStorage.removeItem(draftKey(dog.id));
+        sessionStorage.setItem(appliedKey(dog.id), req.id);
       } catch {
         /* 무시 */
       }
-      showToast(`${withJosa(dog.name, "와")}의 산책을 신청했어요`);
       router.push(`/complete/${req.id}`);
     }, 600);
   };
@@ -316,6 +382,7 @@ function ApplyFlow() {
                           onClick={() => {
                             setDate(d.iso);
                             if (date !== d.iso) setTime(null);
+                            advanceSoon(0);
                           }}
                           aria-pressed={selected}
                           aria-label={`${formatDateKo(d.iso)}${full ? " (마감)" : ""}`}
@@ -373,7 +440,10 @@ function ApplyFlow() {
                       bookedTimes={bookedByDate.get(date) ?? []}
                       pastTimes={pastSlotsFor(date)}
                       value={time}
-                      onChange={setTime}
+                      onChange={(t) => {
+                        setTime(t);
+                        advanceSoon(1);
+                      }}
                     />
                   </div>
                 </section>

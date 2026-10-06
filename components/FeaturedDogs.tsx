@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import DogCard from "@/components/DogCard";
+import DogRail from "@/components/DogRail";
 import { dogs } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { SEED_INTEREST_REGIONS } from "@/lib/data/seed";
 import { useStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 
 /**
  * 홈의 "오늘 산책 가능한 아이들".
@@ -49,11 +49,11 @@ export default function FeaturedDogs() {
           전체 보기 <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+      <DogRail label="오늘 산책 가능한 아이들">
         {list.map((dog, i) => (
-          <DogCard key={dog.id} dog={dog} priority={i < 3} className={cn(i >= 4 && "hidden sm:block")} />
+          <DogCard key={dog.id} dog={dog} priority={i < 3} />
         ))}
-      </div>
+      </DogRail>
       <div className="mt-10 text-center">
         <Link href="/dogs?today=1" className="btn-secondary btn-lg">
           <span className="tnum">오늘 가능한 {total}마리</span> 모두 보기

@@ -50,7 +50,7 @@ export default function ShelterDetailPage({ params }: { params: { id: string } }
         <ShelterImage shelter={shelter} sizes="(max-width: 1280px) 100vw, 1200px" priority />
       </div>
 
-      <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_300px] lg:gap-12">
+      <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-12">
         <div className="min-w-0">
           <p className="section-label">{shelter.region}</p>
           <h1 className="page-title">{shelter.name}</h1>

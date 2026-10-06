@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { RotateCcw, UserRound } from "lucide-react";
 import DogCard from "@/components/DogCard";
+import DogRail from "@/components/DogRail";
 import Dialog from "@/components/Dialog";
 import EmptyState from "@/components/EmptyState";
 import { dogs } from "@/lib/data/dogs";
@@ -88,11 +89,11 @@ export default function MyPage() {
           ) : favoriteDogs.length === 0 ? (
             <EmptyState message={"마음에 드는 아이를 저장해보세요."} ctaLabel="아이들 둘러보기" ctaHref="/dogs" />
           ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+            <DogRail label="찜한 아이들">
               {favoriteDogs.map((dog) => (
                 <DogCard key={dog.id} dog={dog} />
               ))}
-            </div>
+            </DogRail>
           )}
         </div>
       </section>

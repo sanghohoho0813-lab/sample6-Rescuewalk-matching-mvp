@@ -18,15 +18,16 @@ export default function TimeSlotPicker({
   value: string | null;
   onChange: (time: string) => void;
 }) {
+  // 이 아이가 원래 산책하지 않는 시간은 보여주지 않습니다(고를 수 없는 칸이 화면을 채우지 않게)
+  const slots = ALL_SLOTS.filter((s) => availableTimes.includes(s));
   return (
     <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-      {ALL_SLOTS.map((slot) => {
+      {slots.map((slot) => {
         const booked = bookedTimes.includes(slot);
         const past = pastTimes.includes(slot);
-        const offered = availableTimes.includes(slot);
-        const available = offered && !booked && !past;
+        const available = !booked && !past;
         const selected = value === slot;
-        const reason = booked ? "신청함" : past ? "지난 시간" : !offered ? "불가" : null;
+        const reason = booked ? "이미 신청함" : past ? "지난 시간" : null;
         return (
           <button
             key={slot}

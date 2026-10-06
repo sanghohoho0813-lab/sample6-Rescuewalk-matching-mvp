@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import DogImage from "@/components/DogImage";
 import FeaturedDogs from "@/components/FeaturedDogs";
+import HeroStatus from "@/components/HeroStatus";
 import { dogs, getDog } from "@/lib/data/dogs";
 import { shelters } from "@/lib/data/shelters";
 import { testimonials } from "@/lib/data/testimonials";
@@ -33,7 +34,7 @@ export default function HomePage() {
     <>
       {/* Hero */}
       <section className="bg-cream-100">
-        <div className="container-app grid items-center gap-10 py-12 md:grid-cols-[1.05fr_1fr] md:gap-14 md:py-20">
+        <div className="container-app grid grid-cols-1 items-center gap-10 py-12 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:gap-14 md:py-20">
           <div>
             <p className="section-label">유기견 산책 봉사 매칭</p>
             <h1 className="text-[32px] font-extrabold leading-[1.25] tracking-tight text-ink-900 sm:text-[40px] lg:text-[46px]">
@@ -57,11 +58,7 @@ export default function HomePage() {
                 처음이라면 봉사 가이드 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <p className="mt-8 text-sm text-ink-400">
-              오늘 산책 가능한 아이 <strong className="tnum font-semibold text-ink-700">{today}마리</strong>
-              <span className="mx-2 text-cream-300">|</span>
-              함께하는 보호소 <strong className="tnum font-semibold text-ink-700">{shelters.length}곳</strong>
-            </p>
+            <HeroStatus todayCount={today} shelterCount={shelters.length} />
           </div>
 
           <div className="relative">
