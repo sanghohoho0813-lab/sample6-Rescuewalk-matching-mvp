@@ -58,7 +58,7 @@ export default function ShelterImage({
               </div>
             ))}
           </div>
-          <p className="flex items-center justify-center gap-1.5 pb-2 text-xs font-semibold text-ink-500">
+          <p className="flex items-center justify-center gap-1.5 pb-2 text-[13px] font-medium text-ink-500">
             <PawPrint className="h-3 w-3" />
             보호소 사진 준비 중 · 이곳의 아이들이에요
           </p>

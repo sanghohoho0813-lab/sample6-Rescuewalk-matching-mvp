@@ -43,7 +43,7 @@ export default function TimeSlotPicker({
             )}
           >
             <span className="tnum">{formatTimeKo(slot)}</span>
-            {reason && <span className="mt-0.5 text-xs font-medium">{reason}</span>}
+            {reason && <span className="mt-0.5 text-[13px] font-medium">{reason}</span>}
           </button>
         );
       })}

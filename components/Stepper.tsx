@@ -22,7 +22,7 @@ export default function Stepper({ steps, current }: { steps: string[]; current: 
             <span
               aria-current={active ? "step" : undefined}
               className={cn(
-                "relative flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold transition-colors duration-200",
+                "relative z-[1] flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold transition-colors duration-200",
                 done && "bg-sage-500 text-white",
                 active && "bg-ink-900 text-white",
                 !done && !active && "bg-cream-200 text-ink-400"
@@ -32,7 +32,7 @@ export default function Stepper({ steps, current }: { steps: string[]; current: 
             </span>
             <span
               className={cn(
-                "mt-1.5 whitespace-nowrap text-xs",
+                "mt-1.5 whitespace-nowrap text-[13px]",
                 active ? "font-semibold text-ink-900" : "text-ink-400"
               )}
             >

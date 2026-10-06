@@ -24,7 +24,7 @@ const LINKS = [
 export default function Footer() {
   return (
     <footer className="mt-16 border-t border-cream-300/70 bg-cream-100">
-      <div className="container-app pb-[calc(6rem+env(safe-area-inset-bottom))] pt-10 lg:pb-10">
+      <div className="container-app pb-[calc(8rem+env(safe-area-inset-bottom))] pt-10 md:pb-24">
         <div className="flex flex-col gap-8 md:flex-row md:justify-between">
           <div className="max-w-xs">
             <Logo compact />

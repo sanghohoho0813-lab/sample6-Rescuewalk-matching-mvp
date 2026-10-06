@@ -19,14 +19,7 @@ import DogImage, { DogFace } from "@/components/DogImage";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
-import {
-  cn,
-  formatDateFullKo,
-  formatDateKo,
-  formatTimeKo,
-  relativeDayLabel,
-  todayISO,
-} from "@/lib/utils";
+import { cn, formatDateFullKo, formatDateKo, formatTimeKo, relativeDayLabel, todayISO, withJosa } from "@/lib/utils";
 import type { WalkRequest } from "@/lib/types";
 
 const DURATIONS = [20, 30, 40, 60, 90];
@@ -80,7 +73,7 @@ function Timeline({ req }: { req: WalkRequest }) {
             >
               {s.label}
             </span>
-            <span className="tnum mt-0.5 text-xs text-ink-400">
+            <span className="tnum mt-0.5 text-[13px] text-ink-400">
               {formatStamp(s.at) ?? (current ? "진행 중" : "–")}
             </span>
           </li>
@@ -142,12 +135,12 @@ export default function RequestDetailPage() {
   const doCancel = () => {
     cancelRequest(req.id);
     setCancelOpen(false);
-    showToast("산책 신청을 취소했어요.");
+    showToast("산책 신청을 취소했어요");
   };
 
   const doConfirm = () => {
     confirmRequest(req.id);
-    showToast(`${dog.name}와의 방문이 확정됐어요!`, "✅");
+    showToast(`${withJosa(dog.name, "와")}의 방문이 확정됐어요`);
   };
 
   const doLog = () => {
@@ -178,15 +171,15 @@ export default function RequestDetailPage() {
           tone: "bg-sage-50 border-sage-100",
           title: isPast
             ? "방문일이 지났어요. 산책을 마쳤다면 기록을 남겨주세요"
-            : `${relativeDayLabel(req.date, today)}, ${dog.name}를 만나러 가요`,
+            : `${relativeDayLabel(req.date, today)}, ${withJosa(dog.name, "를")} 만나러 가요`,
           body: `${formatDateKo(req.date)} ${formatTimeKo(req.time)} · ${shelter?.name}. 10분 전까지 도착해주세요.`,
         };
       case "completed":
         return {
           tone: "bg-sage-50 border-sage-100",
           title: log
-            ? `${dog.name}와 ${log.durationMin}분 함께 걸었어요`
-            : `${dog.name}와의 산책을 마쳤어요`,
+            ? `${withJosa(dog.name, "와")} ${log.durationMin}분 함께 걸었어요`
+            : `${withJosa(dog.name, "와")}의 산책을 마쳤어요`,
           body: log?.note || "소중한 시간을 내주셔서 고마워요.",
         };
       default:
@@ -219,7 +212,7 @@ export default function RequestDetailPage() {
           </Link>
         ) : (
           <Link href={`/dogs/${dog.id}/apply`} className="btn-primary btn-lg w-full">
-            {dog.name}와 다시 신청하기
+            {withJosa(dog.name, "와")} 다시 신청하기
           </Link>
         );
       default:
@@ -266,7 +259,7 @@ export default function RequestDetailPage() {
             {req.status === "pending" && (
               <div className="mt-4 border-t border-tangerine-100 pt-4">
                 <p className="text-[13px] leading-relaxed text-ink-500">
-                  <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-xs font-semibold text-ink-500">
+                  <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-[13px] font-semibold text-ink-500">
                     데모
                   </span>
                   실제 서비스에서는 보호소가 승인해요. 시연에서는 직접 승인해볼 수 있어요.
@@ -278,7 +271,7 @@ export default function RequestDetailPage() {
             )}
             {req.status === "confirmed" && !isPast && (
               <p className="mt-3 text-[13px] text-ink-500">
-                <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-xs font-semibold text-ink-500">
+                <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-[13px] font-semibold text-ink-500">
                   데모
                 </span>
                 시연에서는 방문일 전에도 산책 완료를 기록할 수 있어요.
@@ -375,7 +368,7 @@ export default function RequestDetailPage() {
               <p className="tnum text-sm text-ink-500">
                 {formatDateKo(req.date)} · {formatTimeKo(req.time)}
               </p>
-              <p className="mt-1 text-lg font-bold text-ink-900">{dog.name}와의 산책</p>
+              <p className="mt-1 text-lg font-bold text-ink-900">{withJosa(dog.name, "와")}의 산책</p>
               {primary && <div className="mt-4">{primary}</div>}
               {!primary && (
                 <p className="mt-3 text-sm leading-relaxed text-ink-500">
@@ -390,7 +383,7 @@ export default function RequestDetailPage() {
       <Dialog
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
-        title={`${dog.name}와의 산책 신청을 취소할까요?`}
+        title={`${withJosa(dog.name, "와")}의 산책 신청을 취소할까요?`}
         description="취소하면 이 시간은 다른 봉사자에게 열려요. 나중에 다시 신청할 수 있어요."
         footer={
           <>
@@ -408,7 +401,7 @@ export default function RequestDetailPage() {
         open={logOpen}
         onClose={() => setLogOpen(false)}
         busy={busy}
-        title={`${dog.name}와의 산책을 기록해요`}
+        title={`${withJosa(dog.name, "와")}의 산책을 기록해요`}
         description="기록은 활동 기록과 배지에 바로 반영돼요."
         footer={
           <>
@@ -461,7 +454,7 @@ export default function RequestDetailPage() {
             value={note}
             onChange={(e) => setNote(e.target.value.slice(0, 120))}
             rows={3}
-            placeholder={`${dog.name}와의 산책은 어땠나요?`}
+            placeholder={`${withJosa(dog.name, "와")}의 산책은 어땠나요?`}
             className="input-field mt-2 resize-none"
           />
         </label>

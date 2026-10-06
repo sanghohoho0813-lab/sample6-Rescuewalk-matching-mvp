@@ -38,7 +38,7 @@ export default function MobileNav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-200",
+                "flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors duration-200",
                 active ? "text-sage-700" : "text-ink-400 hover:text-ink-700"
               )}
             >

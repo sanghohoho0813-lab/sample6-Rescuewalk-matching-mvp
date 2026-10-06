@@ -3,9 +3,8 @@ import { MapPin } from "lucide-react";
 import DogImage from "@/components/DogImage";
 import FavoriteButton from "@/components/FavoriteButton";
 import { PersonalityTags } from "@/components/Tag";
-import EnergyMeter from "@/components/EnergyMeter";
 import { getShelter } from "@/lib/data/shelters";
-import { cn } from "@/lib/utils";
+import { cn, energyLabel } from "@/lib/utils";
 import type { Dog } from "@/lib/types";
 
 /**
@@ -61,7 +60,9 @@ export default function DogCard({
               {dog.age}살 · {dog.gender}
             </span>
           </h3>
-          <EnergyMeter level={dog.energy} className="shrink-0" />
+          <span className="shrink-0 text-[13px] text-ink-400">
+            에너지 <span className="font-semibold text-ink-700">{energyLabel(dog.energy)}</span>
+          </span>
         </div>
         <p className="mt-0.5 truncate text-sm text-ink-500">
           {dog.breed} · {dog.size}견 · 산책 {dog.difficulty}

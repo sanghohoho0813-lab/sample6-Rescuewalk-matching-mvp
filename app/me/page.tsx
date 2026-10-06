@@ -39,7 +39,7 @@ export default function MyPage() {
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-2xl font-bold text-ink-900">
             김지우님
-            <span className="rounded-md bg-cream-200 px-2 py-0.5 text-xs font-semibold text-ink-500">
+            <span className="rounded-md bg-cream-200 px-2 py-0.5 text-[13px] font-semibold text-ink-500">
               데모 계정
             </span>
           </h1>
@@ -150,7 +150,7 @@ export default function MyPage() {
               onClick={() => {
                 resetDemo();
                 setResetOpen(false);
-                showToast("데모 데이터를 처음 상태로 되돌렸어요.");
+                showToast("데모 데이터를 처음 상태로 되돌렸어요");
               }}
               className="btn-danger flex-1"
             >

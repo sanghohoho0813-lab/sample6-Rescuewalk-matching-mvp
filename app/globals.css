@@ -62,8 +62,9 @@ body {
     @apply transition-[border-color,box-shadow] duration-200 hover:border-sage-200 hover:shadow-card-hover;
   }
 
+  /* 태그·상태 배지 — 13px 미만으로 내리지 않음 */
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium leading-none;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-[5px] text-[13px] font-medium leading-none;
   }
 
   .input-field {
@@ -90,6 +91,15 @@ body {
   .tnum {
     @apply whitespace-nowrap tabular-nums;
   }
+}
+
+/*
+ * 미래AI랩 데모 공용 뒤로·앞으로 버튼(public/mirae-history-nav.js)은 화면에 떠 있으므로,
+ * 바텀시트·모달이 열려 있는 동안에는 시트 안의 버튼·입력칸을 가리지 않게 잠시 숨깁니다.
+ * (Dialog 가 body[data-modal-open] 을 붙였다 뗍니다)
+ */
+body[data-modal-open] [data-mirae-history-nav] {
+  display: none !important;
 }
 
 /* 모션에 민감한 사용자: 반복 애니메이션을 정지하고 전환은 즉시 끝나게 */

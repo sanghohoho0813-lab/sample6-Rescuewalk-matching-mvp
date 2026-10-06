@@ -3,6 +3,7 @@
 import Link from "next/link";
 import FavoriteButton from "@/components/FavoriteButton";
 import type { Dog } from "@/lib/types";
+import { withJosa } from "@/lib/utils";
 
 /**
  * 모바일 하단 고정 신청 바.
@@ -25,7 +26,7 @@ export default function StickyApplyBar({ dog }: { dog: Dog }) {
           </button>
         ) : (
           <Link href={`/dogs/${dog.id}/apply`} className="btn-primary btn-lg flex-1">
-            {dog.name}와 산책 신청하기
+            {withJosa(dog.name, "와")} 산책 신청하기
           </Link>
         )}
       </div>

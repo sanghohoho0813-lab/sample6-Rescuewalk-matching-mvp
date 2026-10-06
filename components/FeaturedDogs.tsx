@@ -5,16 +5,19 @@ import { ArrowRight } from "lucide-react";
 import DogCard from "@/components/DogCard";
 import { dogs } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
+import { SEED_INTEREST_REGIONS } from "@/lib/data/seed";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 /**
  * 홈의 "오늘 산책 가능한 아이들".
  * 마이페이지에서 저장한 관심 지역의 아이들을 먼저 보여줍니다(실제 저장값 기반).
+ * 저장값을 읽기 전(서버 렌더)에는 처음 방문자의 기본값으로 그려서,
+ * 읽은 뒤 카드 순서가 뒤바뀌며 깜빡이는 일을 줄입니다.
  */
 export default function FeaturedDogs() {
   const { interestRegions, hydrated } = useStore();
-  const regions = hydrated ? interestRegions : [];
+  const regions = hydrated ? interestRegions : SEED_INTEREST_REGIONS;
 
   const inRegion = (id: string) => regions.includes(getShelter(id)?.region ?? "");
   const list = dogs
@@ -52,7 +55,7 @@ export default function FeaturedDogs() {
         ))}
       </div>
       <div className="mt-10 text-center">
-        <Link href="/dogs" className="btn-secondary btn-lg">
+        <Link href="/dogs?today=1" className="btn-secondary btn-lg">
           <span className="tnum">오늘 가능한 {total}마리</span> 모두 보기
         </Link>
       </div>

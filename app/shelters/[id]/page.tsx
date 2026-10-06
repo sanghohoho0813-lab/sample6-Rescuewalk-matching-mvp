@@ -18,13 +18,23 @@ export function generateMetadata({ params }: { params: { id: string } }) {
 export default function ShelterDetailPage({ params }: { params: { id: string } }) {
   const shelter = getShelter(params.id);
   if (!shelter) notFound();
-  const shelterDogs = dogs.filter((d) => d.shelterId === shelter.id);
+  // 지금 산책할 수 있는 아이를 먼저
+  const shelterDogs = dogs
+    .filter((d) => d.shelterId === shelter.id)
+    .sort((a, b) => Number(a.availability === "unavailable") - Number(b.availability === "unavailable"));
   const walkable = shelterDogs.filter((d) => d.availability === "available").length;
 
   const visit = [
     { label: "주소", value: shelter.address },
     { label: "운영 시간", value: shelter.hours },
-    { label: "전화", value: shelter.phone },
+    {
+      label: "전화",
+      value: (
+        <a href={`tel:${shelter.phone}`} className="tnum underline-offset-4 hover:underline">
+          {shelter.phone}
+        </a>
+      ),
+    },
   ];
 
   return (

@@ -32,7 +32,6 @@ const LS_KEY = "rescuewalk-store-v2";
 interface ToastState {
   id: number;
   message: string;
-  emoji?: string;
 }
 
 interface PersistedState {
@@ -55,7 +54,7 @@ interface StoreState extends PersistedState {
   completeWalk: (requestId: string, input: { durationMin: number; note: string }) => string | null;
   toggleInterestRegion: (region: string) => void;
   resetDemo: () => void;
-  showToast: (message: string, emoji?: string) => void;
+  showToast: (message: string) => void;
 }
 
 const StoreContext = createContext<StoreState | null>(null);
@@ -117,9 +116,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state, hydrated]);
 
-  const showToast = useCallback((message: string, emoji?: string) => {
+  const showToast = useCallback((message: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast({ id: Date.now(), message, emoji });
+    setToast({ id: Date.now(), message });
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   }, []);
 

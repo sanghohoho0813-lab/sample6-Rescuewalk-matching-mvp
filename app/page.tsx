@@ -6,6 +6,7 @@ import FeaturedDogs from "@/components/FeaturedDogs";
 import { dogs, getDog } from "@/lib/data/dogs";
 import { shelters } from "@/lib/data/shelters";
 import { testimonials } from "@/lib/data/testimonials";
+import { withJosa } from "@/lib/utils";
 
 const STEPS = [
   { image: "guide-01-choose.webp", title: "아이 고르기", desc: "성격과 산책 난이도를 보고 나와 맞는 아이를 골라요." },
@@ -178,10 +179,10 @@ export default function HomePage() {
                   <span className="font-semibold text-ink-700">{t.author}</span> ·{" "}
                   {dog ? (
                     <Link href={`/dogs/${dog.id}`} className="underline-offset-4 hover:underline">
-                      {t.dogName}와 산책
+                      {withJosa(t.dogName, "와")} 산책
                     </Link>
                   ) : (
-                    `${t.dogName}와 산책`
+                    `${withJosa(t.dogName, "와")} 산책`
                   )}{" "}
                   · {t.region}
                 </figcaption>

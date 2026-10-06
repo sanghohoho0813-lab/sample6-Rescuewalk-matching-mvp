@@ -1,25 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import DogCard from "@/components/DogCard";
+import Dialog from "@/components/Dialog";
 import EmptyState from "@/components/EmptyState";
 import { dogs } from "@/lib/data/dogs";
-import { shelters } from "@/lib/data/shelters";
+import { shelters, getShelter } from "@/lib/data/shelters";
 import { cn } from "@/lib/utils";
 import type { Dog } from "@/lib/types";
 
 const REGIONS = ["서울", "인천", "경기", "대전", "부산"] as const;
 const SIZES = ["소형", "중형", "대형"] as const;
 const DIFFICULTIES = ["쉬움", "보통", "어려움"] as const;
-const PERSONALITY_FILTERS = [
-  "사람 좋아함",
-  "애교많음",
-  "차분해요",
-  "온순한 성격",
-  "밝고 발랄",
-  "초보 가능",
-] as const;
+const TRAITS = ["초보 가능", "사람 좋아함", "애교많음", "차분해요", "온순한 성격", "밝고 발랄"] as const;
 
 const SORTS = [
   { key: "recommended", label: "추천순" },
@@ -27,7 +22,6 @@ const SORTS = [
   { key: "today", label: "오늘 가능한 순" },
   { key: "recent", label: "최근 등록순" },
 ] as const;
-
 type SortKey = (typeof SORTS)[number]["key"];
 
 interface Filters {
@@ -35,59 +29,99 @@ interface Filters {
   shelterId: string | null;
   size: string | null;
   difficulty: string | null;
-  personality: string[];
+  traits: string[];
   todayOnly: boolean;
 }
 
-const EMPTY_FILTERS: Filters = {
+const EMPTY: Filters = {
   region: null,
   shelterId: null,
   size: null,
   difficulty: null,
-  personality: [],
+  traits: [],
   todayOnly: false,
 };
 
+/**
+ * 필터·정렬은 URL 에 둡니다.
+ * - 상세로 갔다가 뒤로 오면 같은 조건 그대로
+ * - 홈의 "오늘 가능한 N마리 모두 보기" 처럼 조건이 걸린 링크로 바로 열 수 있음
+ */
+function readParams(sp: URLSearchParams): { filters: Filters; sort: SortKey } {
+  const pick = <T extends string>(v: string | null, allowed: readonly T[]) =>
+    v && (allowed as readonly string[]).includes(v) ? (v as T) : null;
+  const shelterId = sp.get("shelter");
+  return {
+    filters: {
+      region: pick(sp.get("region"), REGIONS),
+      shelterId: shelterId && getShelter(shelterId) ? shelterId : null,
+      size: pick(sp.get("size"), SIZES),
+      difficulty: pick(sp.get("level"), DIFFICULTIES),
+      traits: (sp.get("trait") ?? "").split(",").filter((t) => (TRAITS as readonly string[]).includes(t)),
+      todayOnly: sp.get("today") === "1",
+    },
+    sort:
+      pick(
+        sp.get("sort"),
+        SORTS.map((s) => s.key)
+      ) ?? "recommended",
+  };
+}
+
+function toQuery(f: Filters, sort: SortKey): string {
+  const q = new URLSearchParams();
+  if (f.todayOnly) q.set("today", "1");
+  if (f.region) q.set("region", f.region);
+  if (f.shelterId) q.set("shelter", f.shelterId);
+  if (f.size) q.set("size", f.size);
+  if (f.difficulty) q.set("level", f.difficulty);
+  if (f.traits.length) q.set("trait", f.traits.join(","));
+  if (sort !== "recommended") q.set("sort", sort);
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
+const isWalkableToday = (d: Dog) => d.availableToday && d.availability === "available";
+
 function matches(dog: Dog, f: Filters): boolean {
-  const shelter = shelters.find((s) => s.id === dog.shelterId);
+  const shelter = getShelter(dog.shelterId);
   if (f.region && shelter?.region !== f.region) return false;
   if (f.shelterId && dog.shelterId !== f.shelterId) return false;
   if (f.size && dog.size !== f.size) return false;
   if (f.difficulty && dog.difficulty !== f.difficulty) return false;
-  if (f.todayOnly && !(dog.availableToday && dog.availability === "available")) return false;
-  if (f.personality.length > 0) {
-    const beginner = f.personality.includes("초보 가능");
-    const rest = f.personality.filter((p) => p !== "초보 가능");
+  if (f.todayOnly && !isWalkableToday(dog)) return false;
+  if (f.traits.length > 0) {
+    const beginner = f.traits.includes("초보 가능");
+    const rest = f.traits.filter((t) => t !== "초보 가능");
     if (beginner && !dog.walkNote.beginnerFriendly) return false;
-    if (rest.length > 0 && !rest.some((p) => dog.personality.includes(p))) return false;
+    if (rest.length > 0 && !rest.some((t) => dog.personality.includes(t))) return false;
   }
   return true;
 }
 
 function sortDogs(list: Dog[], sort: SortKey): Dog[] {
-  const arr = [...list];
-  switch (sort) {
-    case "distance":
-      return arr.sort((a, b) => a.distanceKm - b.distanceKm);
-    case "today":
-      return arr.sort(
-        (a, b) =>
-          Number(b.availableToday && b.availability === "available") -
-          Number(a.availableToday && a.availability === "available")
-      );
-    case "recent":
-      return arr.sort((a, b) => b.registeredAt.localeCompare(a.registeredAt));
-    default:
-      return arr.sort(
-        (a, b) =>
+  const bySort = (a: Dog, b: Dog) => {
+    switch (sort) {
+      case "distance":
+        return a.distanceKm - b.distanceKm;
+      case "today":
+        return Number(isWalkableToday(b)) - Number(isWalkableToday(a)) || a.distanceKm - b.distanceKm;
+      case "recent":
+        return b.registeredAt.localeCompare(a.registeredAt);
+      default:
+        return (
           Number(b.recommended) - Number(a.recommended) ||
-          Number(b.availableToday) - Number(a.availableToday) ||
+          Number(isWalkableToday(b)) - Number(isWalkableToday(a)) ||
           a.distanceKm - b.distanceKm
-      );
-  }
+        );
+    }
+  };
+  // 지금 신청할 수 없는(쉬는 중) 아이는 어떤 정렬에서도 맨 뒤로
+  const resting = (d: Dog) => Number(d.availability === "unavailable");
+  return [...list].sort((a, b) => resting(a) - resting(b) || bySort(a, b));
 }
 
-function FilterChip({
+function Chip({
   active,
   onClick,
   children,
@@ -102,10 +136,10 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "min-h-[38px] rounded-full border px-3.5 text-[13px] font-medium transition-all duration-200",
+        "min-h-[40px] rounded-full border px-4 text-[15px] transition-colors duration-150",
         active
-          ? "border-sage-600 bg-sage-600 text-white"
-          : "border-cream-300 bg-white text-ink-500 hover:border-sage-300 hover:text-ink-900"
+          ? "border-sage-600 bg-sage-600 font-semibold text-white"
+          : "border-cream-300 bg-white text-ink-700 hover:border-sage-300"
       )}
     >
       {children}
@@ -113,173 +147,219 @@ function FilterChip({
   );
 }
 
+function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <fieldset>
+      <legend className="mb-2.5 text-[15px] font-semibold text-ink-900">{title}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
 function FilterPanel({
   filters,
-  setFilters,
+  update,
 }: {
   filters: Filters;
-  setFilters: React.Dispatch<React.SetStateAction<Filters>>;
+  update: (fn: (f: Filters) => Filters) => void;
 }) {
-  const toggle = <K extends "region" | "shelterId" | "size" | "difficulty">(
-    key: K,
-    value: string
-  ) =>
-    setFilters((f) => ({ ...f, [key]: f[key] === value ? null : value }));
+  const one = (key: "region" | "size" | "difficulty", value: string) =>
+    update((f) => ({
+      ...f,
+      [key]: f[key] === value ? null : value,
+      // 지역이 바뀌면 다른 지역의 보호소 선택은 풀어줍니다
+      ...(key === "region" ? { shelterId: null } : {}),
+    }));
+  const shelterOptions = filters.region ? shelters.filter((s) => s.region === filters.region) : shelters;
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h3 className="mb-2.5 text-sm font-bold text-ink-700">오늘 가능 여부</h3>
-        <FilterChip
-          active={filters.todayOnly}
-          onClick={() => setFilters((f) => ({ ...f, todayOnly: !f.todayOnly }))}
-        >
-          ☀️ 오늘 산책 가능한 아이만
-        </FilterChip>
-      </section>
+    <div className="space-y-7">
+      <FilterGroup title="날짜">
+        <Chip active={filters.todayOnly} onClick={() => update((f) => ({ ...f, todayOnly: !f.todayOnly }))}>
+          오늘 산책 가능
+        </Chip>
+      </FilterGroup>
 
-      <section>
-        <h3 className="mb-2.5 text-sm font-bold text-ink-700">지역</h3>
+      <FilterGroup title="지역 · 보호소">
         <div className="flex flex-wrap gap-2">
           {REGIONS.map((r) => (
-            <FilterChip key={r} active={filters.region === r} onClick={() => toggle("region", r)}>
+            <Chip key={r} active={filters.region === r} onClick={() => one("region", r)}>
               {r}
-            </FilterChip>
+            </Chip>
           ))}
         </div>
-      </section>
+        <label className="relative mt-3 block">
+          <span className="sr-only">보호소</span>
+          <select
+            value={filters.shelterId ?? ""}
+            onChange={(e) => update((f) => ({ ...f, shelterId: e.target.value || null }))}
+            className="input-field cursor-pointer appearance-none pr-11"
+          >
+            <option value="">{filters.region ? `${filters.region}의 모든 보호소` : "모든 보호소"}</option>
+            {shelterOptions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            aria-hidden
+            className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+          />
+        </label>
+      </FilterGroup>
 
-      <section>
-        <h3 className="mb-2.5 text-sm font-bold text-ink-700">보호소</h3>
-        <div className="flex flex-wrap gap-2">
-          {shelters.map((s) => (
-            <FilterChip
-              key={s.id}
-              active={filters.shelterId === s.id}
-              onClick={() => toggle("shelterId", s.id)}
-            >
-              {s.name}
-            </FilterChip>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h3 className="mb-2.5 text-sm font-bold text-ink-700">크기</h3>
+      <FilterGroup title="크기">
         <div className="flex flex-wrap gap-2">
           {SIZES.map((s) => (
-            <FilterChip key={s} active={filters.size === s} onClick={() => toggle("size", s)}>
+            <Chip key={s} active={filters.size === s} onClick={() => one("size", s)}>
               {s}견
-            </FilterChip>
+            </Chip>
           ))}
         </div>
-      </section>
+      </FilterGroup>
 
-      <section>
-        <h3 className="mb-2.5 text-sm font-bold text-ink-700">산책 난이도</h3>
+      <FilterGroup title="산책 난이도">
         <div className="flex flex-wrap gap-2">
           {DIFFICULTIES.map((d) => (
-            <FilterChip
-              key={d}
-              active={filters.difficulty === d}
-              onClick={() => toggle("difficulty", d)}
-            >
+            <Chip key={d} active={filters.difficulty === d} onClick={() => one("difficulty", d)}>
               {d}
-            </FilterChip>
+            </Chip>
           ))}
         </div>
-      </section>
+      </FilterGroup>
 
-      <section>
-        <h3 className="mb-2.5 text-sm font-bold text-ink-700">성격</h3>
+      <FilterGroup title="성격">
         <div className="flex flex-wrap gap-2">
-          {PERSONALITY_FILTERS.map((p) => (
-            <FilterChip
-              key={p}
-              active={filters.personality.includes(p)}
+          {TRAITS.map((t) => (
+            <Chip
+              key={t}
+              active={filters.traits.includes(t)}
               onClick={() =>
-                setFilters((f) => ({
+                update((f) => ({
                   ...f,
-                  personality: f.personality.includes(p)
-                    ? f.personality.filter((x) => x !== p)
-                    : [...f.personality, p],
+                  traits: f.traits.includes(t) ? f.traits.filter((x) => x !== t) : [...f.traits, t],
                 }))
               }
             >
-              {p}
-            </FilterChip>
+              {t}
+            </Chip>
           ))}
         </div>
-      </section>
+      </FilterGroup>
     </div>
   );
 }
 
-export default function DogsPage() {
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [sort, setSort] = useState<SortKey>("recommended");
-  const [drawerOpen, setDrawerOpen] = useState(false);
+function DogsBrowser() {
+  const sp = useSearchParams();
+  const { filters, sort } = useMemo(() => readParams(new URLSearchParams(sp.toString())), [sp]);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const activeCount =
-    (filters.region ? 1 : 0) +
-    (filters.shelterId ? 1 : 0) +
-    (filters.size ? 1 : 0) +
-    (filters.difficulty ? 1 : 0) +
-    filters.personality.length +
-    (filters.todayOnly ? 1 : 0);
+  // URL 만 바꿉니다(서버 왕복 없이). Next 14.1+ 는 history API 변경을 useSearchParams 와 동기화합니다.
+  const commit = useCallback((f: Filters, s: SortKey) => {
+    window.history.replaceState(null, "", `/dogs${toQuery(f, s)}`);
+  }, []);
+  const update = useCallback(
+    (fn: (f: Filters) => Filters) => commit(fn(filters), sort),
+    [commit, filters, sort]
+  );
+
+  // 상세의 "← 강아지 찾기" 가 이 조건 그대로 돌아올 수 있게 기억
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("rw:dogsHref", `/dogs${toQuery(filters, sort)}`);
+    } catch {
+      /* 저장소가 막혀 있으면 기본 목록으로 돌아감 */
+    }
+  }, [filters, sort]);
 
   const result = useMemo(
-    () => sortDogs(dogs.filter((d) => matches(d, filters)), sort),
+    () =>
+      sortDogs(
+        dogs.filter((d) => matches(d, filters)),
+        sort
+      ),
     [filters, sort]
   );
 
-  // 모바일 필터 시트: 열려 있는 동안 배경 스크롤 잠금 + Esc 로 닫기
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerOpen(false);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [drawerOpen]);
+  const active: { label: string; clear: (f: Filters) => Filters }[] = [
+    ...(filters.todayOnly
+      ? [{ label: "오늘 산책 가능", clear: (f: Filters) => ({ ...f, todayOnly: false }) }]
+      : []),
+    ...(filters.region
+      ? [{ label: filters.region, clear: (f: Filters) => ({ ...f, region: null, shelterId: null }) }]
+      : []),
+    ...(filters.shelterId
+      ? [
+          {
+            label: getShelter(filters.shelterId)?.name ?? "",
+            clear: (f: Filters) => ({ ...f, shelterId: null }),
+          },
+        ]
+      : []),
+    ...(filters.size ? [{ label: `${filters.size}견`, clear: (f: Filters) => ({ ...f, size: null }) }] : []),
+    ...(filters.difficulty
+      ? [{ label: `산책 ${filters.difficulty}`, clear: (f: Filters) => ({ ...f, difficulty: null }) }]
+      : []),
+    ...filters.traits.map((t) => ({
+      label: t,
+      clear: (f: Filters) => ({ ...f, traits: f.traits.filter((x) => x !== t) }),
+    })),
+  ];
+  // 모바일 상단의 '오늘 가능' 빠른 토글과 별개로, 시트 안에서만 바꿀 수 있는 조건 수
+  const sheetCount = active.length - (filters.todayOnly ? 1 : 0);
 
   return (
     <div className="container-app py-8 md:py-10">
-      <header className="mb-6">
-        <h1 className="page-title">강아지 찾기</h1>
-        <p className="mt-1.5 text-[15px] text-ink-500" aria-live="polite">
-          {activeCount > 0 ? "조건에 맞는 아이 " : "산책 친구를 기다리는 아이 "}
-          <strong className="tnum font-semibold text-ink-900">{result.length}마리</strong>
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div>
+          <h1 className="page-title">강아지 찾기</h1>
+          <p className="mt-1.5 text-[15px] text-ink-500" aria-live="polite">
+            {active.length > 0 ? "조건에 맞는 아이 " : "산책 친구를 기다리는 아이 "}
+            <strong className="tnum font-semibold text-ink-900">{result.length}마리</strong>
+          </p>
+        </div>
+        <label className="hidden items-center gap-2 text-[15px] text-ink-500 lg:flex">
+          정렬
+          <select
+            value={sort}
+            onChange={(e) => commit(filters, e.target.value as SortKey)}
+            className="min-h-[44px] rounded-full border border-cream-300 bg-white px-4 text-[15px] font-medium text-ink-900 focus:border-sage-400 focus:outline-none"
+          >
+            {SORTS.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </header>
 
-      {/* 모바일: 필터 버튼 + 정렬 */}
-      <div className="mb-6 flex items-center gap-2 lg:hidden">
+      {/* 모바일 · 태블릿 */}
+      <div className="mb-5 flex items-center gap-2 lg:hidden">
         <button
           type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="btn-secondary shrink-0 whitespace-nowrap !px-4 text-sm"
+          onClick={() => setSheetOpen(true)}
+          className="btn-secondary shrink-0 whitespace-nowrap !px-4"
         >
           <SlidersHorizontal className="h-4 w-4" />
           필터
-          {activeCount > 0 && (
+          {sheetCount > 0 && (
             <span className="tnum flex h-5 min-w-5 items-center justify-center rounded-full bg-ink-900 px-1 text-xs font-bold text-white">
-              {activeCount}
+              {sheetCount}
             </span>
           )}
         </button>
         <button
           type="button"
           aria-pressed={filters.todayOnly}
-          onClick={() => setFilters((f) => ({ ...f, todayOnly: !f.todayOnly }))}
+          onClick={() => update((f) => ({ ...f, todayOnly: !f.todayOnly }))}
           className={cn(
-            "btn shrink-0 whitespace-nowrap !px-4 text-sm",
+            "btn shrink-0 whitespace-nowrap border !px-4",
             filters.todayOnly
-              ? "border border-sage-600 bg-sage-600 text-white"
-              : "border border-cream-300 bg-white text-ink-700"
+              ? "border-sage-600 bg-sage-600 text-white"
+              : "border-cream-300 bg-white text-ink-700"
           )}
         >
           오늘 가능
@@ -287,9 +367,9 @@ export default function DogsPage() {
         <span className="flex-1" />
         <select
           value={sort}
-          onChange={(e) => setSort(e.target.value as SortKey)}
+          onChange={(e) => commit(filters, e.target.value as SortKey)}
           aria-label="정렬"
-          className="min-h-[44px] rounded-full border border-cream-300 bg-white px-3 text-sm font-medium text-ink-700 focus:border-sage-400 focus:outline-none"
+          className="min-h-[44px] min-w-0 rounded-full border border-cream-300 bg-white px-3 text-[15px] font-medium text-ink-700 focus:border-sage-400 focus:outline-none"
         >
           {SORTS.map((s) => (
             <option key={s.key} value={s.key}>
@@ -299,52 +379,43 @@ export default function DogsPage() {
         </select>
       </div>
 
-      <div className="flex gap-8">
-        {/* PC 필터 사이드바 */}
-        <aside className="hidden w-60 shrink-0 lg:block">
-          <div className="card sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-bold text-ink-900">필터</h2>
-              {activeCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setFilters(EMPTY_FILTERS)}
-                  className="flex min-h-[32px] items-center gap-1 text-[13px] font-semibold text-ink-400 hover:text-ink-900"
-                >
-                  <RotateCcw className="h-3 w-3" /> 초기화
-                </button>
-              )}
-            </div>
-            <FilterPanel filters={filters} setFilters={setFilters} />
+      <div className="flex gap-10">
+        <aside className="hidden w-56 shrink-0 lg:block" aria-label="필터">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pb-6 pr-1">
+            <FilterPanel filters={filters} update={update} />
           </div>
         </aside>
 
         <div className="min-w-0 flex-1">
-          {/* PC 정렬 탭 */}
-          <div className="mb-5 hidden items-center gap-2 lg:flex">
-            {SORTS.map((s) => (
+          {active.length > 0 && (
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              {active.map((a) => (
+                <button
+                  key={a.label}
+                  type="button"
+                  onClick={() => update(a.clear)}
+                  aria-label={`${a.label} 조건 해제`}
+                  className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-sage-100 pl-3.5 pr-2.5 text-sm font-medium text-sage-800 hover:bg-sage-200"
+                >
+                  {a.label}
+                  <X className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              ))}
               <button
-                key={s.key}
                 type="button"
-                onClick={() => setSort(s.key)}
-                aria-pressed={sort === s.key}
-                className={cn(
-                  "min-h-[40px] rounded-full border px-4 text-sm font-semibold transition-colors duration-200",
-                  sort === s.key
-                    ? "border-ink-900 bg-ink-900 text-white"
-                    : "border-cream-300 bg-white text-ink-500 hover:text-ink-900"
-                )}
+                onClick={() => commit(EMPTY, sort)}
+                className="min-h-[36px] px-2 text-sm font-medium text-ink-500 underline-offset-4 hover:text-ink-900 hover:underline"
               >
-                {s.label}
+                모두 해제
               </button>
-            ))}
-          </div>
+            </div>
+          )}
 
           {result.length === 0 ? (
             <EmptyState
-              message={"조건에 맞는 아이를 찾지 못했어요.\n필터를 조금만 넓혀볼까요?"}
-              ctaLabel="필터 초기화"
-              onAction={() => setFilters(EMPTY_FILTERS)}
+              message={"조건에 맞는 아이를 찾지 못했어요.\n조건을 조금만 넓혀볼까요?"}
+              ctaLabel="필터 모두 해제"
+              onAction={() => commit(EMPTY, sort)}
             />
           ) : (
             <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
@@ -356,48 +427,37 @@ export default function DogsPage() {
         </div>
       </div>
 
-      {/* 모바일 필터 드로어 */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="필터">
-          <button
-            type="button"
-            aria-label="필터 닫기"
-            className="absolute inset-0 animate-fade-in bg-ink-900/40"
-            onClick={() => setDrawerOpen(false)}
-          />
-          <div className="absolute inset-x-0 bottom-0 max-h-[82vh] animate-slide-up overflow-y-auto rounded-t-[24px] bg-cream-50 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-cream-300" />
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-ink-900">필터</h2>
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                aria-label="닫기"
-                className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-cream-200"
-              >
-                <X className="h-5 w-5 text-ink-500" />
-              </button>
-            </div>
-            <FilterPanel filters={filters} setFilters={setFilters} />
-            <div className="sticky bottom-0 mt-6 flex gap-3 bg-cream-50 pt-3">
-              <button
-                type="button"
-                onClick={() => setFilters(EMPTY_FILTERS)}
-                className="btn-secondary flex-1"
-              >
-                초기화
-              </button>
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                className="btn-primary flex-[2]"
-              >
-                {result.length}마리 보기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title="필터"
+        footer={
+          <>
+            <button type="button" onClick={() => commit(EMPTY, sort)} className="btn-secondary flex-1">
+              모두 해제
+            </button>
+            <button type="button" onClick={() => setSheetOpen(false)} className="btn-primary flex-[2]">
+              <span className="tnum">{result.length}마리 보기</span>
+            </button>
+          </>
+        }
+      >
+        <FilterPanel filters={filters} update={update} />
+      </Dialog>
     </div>
+  );
+}
+
+export default function DogsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container-app py-10">
+          <div className="h-9 w-40 animate-pulse rounded-lg bg-cream-200" />
+        </div>
+      }
+    >
+      <DogsBrowser />
+    </Suspense>
   );
 }

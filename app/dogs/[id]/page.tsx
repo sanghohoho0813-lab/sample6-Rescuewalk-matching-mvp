@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import DogImage from "@/components/DogImage";
 import FavoriteButton from "@/components/FavoriteButton";
-import EnergyMeter from "@/components/EnergyMeter";
 import { PersonalityTags } from "@/components/Tag";
 import DogCard from "@/components/DogCard";
+import BackToDogs from "@/components/BackToDogs";
 import StickyApplyBar from "./StickyApplyBar";
 import { dogs, getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
-import { formatTimeKo } from "@/lib/utils";
+import { energyLabel, formatTimeKo, withJosa } from "@/lib/utils";
 
 export function generateStaticParams() {
   return dogs.map((d) => ({ id: d.id }));
@@ -57,7 +57,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
       )}
       {unavailable ? (
         <p className="mt-5 rounded-2xl bg-cream-100 p-4 text-center text-[15px] text-ink-500">
-          {dog.name}는 지금 잠시 쉬는 중이에요.
+          {withJosa(dog.name, "는")} 지금 잠시 쉬는 중이에요.
         </p>
       ) : (
         <Link href={`/dogs/${dog.id}/apply`} className="btn-primary btn-lg mt-5 w-full">
@@ -71,12 +71,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
   return (
     <>
       <div className="container-app pb-28 pt-4 md:pt-8 lg:pb-10">
-        <Link
-          href="/dogs"
-          className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-full px-2 text-sm font-medium text-ink-500 hover:text-ink-900"
-        >
-          <ArrowLeft className="h-4 w-4" /> 강아지 찾기
-        </Link>
+        <BackToDogs />
 
         <div className="mt-2 grid gap-10 lg:grid-cols-[1fr_340px] lg:gap-12">
           <div className="min-w-0">
@@ -124,9 +119,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
               </div>
               <div className="flex flex-col-reverse gap-1 px-2">
                 <dt className="text-[13px] text-ink-400">에너지</dt>
-                <dd className="flex h-[25.5px] items-center justify-center">
-                  <EnergyMeter level={dog.energy} />
-                </dd>
+                <dd className="text-[17px] font-bold text-ink-900">{energyLabel(dog.energy)}</dd>
               </div>
               <div className="flex flex-col-reverse gap-1 px-2">
                 <dt className="text-[13px] text-ink-400">초보 봉사자</dt>
@@ -189,7 +182,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
           {/* PC: 신청 요약 */}
           <aside className="hidden lg:block">
             <div className="card sticky top-24 p-6">
-              <p className="text-lg font-bold text-ink-900">{dog.name}와 산책하기</p>
+              <p className="text-lg font-bold text-ink-900">{withJosa(dog.name, "와")} 산책하기</p>
               <p className="mt-1 text-sm text-ink-500">추천 산책 시간 {dog.walkNote.recommendedDuration}</p>
               <div className="mt-5 border-t border-cream-200 pt-5">{applyPanel}</div>
             </div>

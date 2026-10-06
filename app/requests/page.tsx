@@ -120,7 +120,7 @@ export default function RequestsPage() {
           >
             {f.label}
             {hydrated && (
-              <span className={cn("tnum text-xs", filter === f.key ? "text-white/70" : "text-ink-300")}>
+              <span className={cn("tnum text-[13px]", filter === f.key ? "text-white/70" : "text-ink-300")}>
                 {counts[f.key] ?? 0}
               </span>
             )}

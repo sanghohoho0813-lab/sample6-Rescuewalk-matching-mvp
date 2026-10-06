@@ -4,6 +4,28 @@ export function cn(...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(" ");
 }
 
+/**
+ * 이름 뒤에 받침에 맞는 조사를 붙입니다. ("장군" + "와" → "장군과", "보리" + "와" → "보리와")
+ * 이름이 데이터로 바뀌어도 "장군와 산책", "몽실를 찜했어요" 같은 문장이 생기지 않게 합니다.
+ */
+const JOSA: Record<string, [withFinal: string, withoutFinal: string]> = {
+  와: ["과", "와"],
+  과: ["과", "와"],
+  가: ["이", "가"],
+  이: ["이", "가"],
+  를: ["을", "를"],
+  을: ["을", "를"],
+  는: ["은", "는"],
+  은: ["은", "는"],
+};
+
+export function withJosa(word: string, josa: keyof typeof JOSA): string {
+  const code = word.charCodeAt(word.length - 1);
+  const isHangul = code >= 0xac00 && code <= 0xd7a3;
+  const hasFinal = isHangul && (code - 0xac00) % 28 !== 0;
+  return word + JOSA[josa][hasFinal ? 0 : 1];
+}
+
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 export function formatDateKo(iso: string): string {
@@ -23,6 +45,11 @@ export function formatTimeKo(time: string): string {
   const isPm = h >= 12;
   const hour12 = h % 12 === 0 ? 12 : h % 12;
   return `${isPm ? "오후" : "오전"} ${hour12}:${String(min).padStart(2, "0")}`;
+}
+
+/** 에너지 레벨(1~5)을 카드에서 바로 읽히는 말로 */
+export function energyLabel(level: number): string {
+  return level <= 2 ? "낮음" : level === 3 ? "보통" : level === 4 ? "높음" : "아주 높음";
 }
 
 export function todayISO(): string {

@@ -10,7 +10,7 @@ import MyWalkTabs from "@/components/MyWalkTabs";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
-import { BADGES, cn, computeStats, formatDateKo } from "@/lib/utils";
+import { BADGES, cn, computeStats, formatDateKo, withJosa } from "@/lib/utils";
 
 function formatDuration(totalMinutes: number) {
   const h = Math.floor(totalMinutes / 60);
@@ -75,7 +75,7 @@ function ActivityContent() {
         >
           <p className="flex items-center gap-2 text-[17px] font-bold text-ink-900">
             <CheckCircle2 className="h-5 w-5 shrink-0 text-sage-600" aria-hidden />
-            {newDog.name}와의 산책이 기록됐어요
+            {withJosa(newDog.name, "와")}의 산책이 기록됐어요
           </p>
           <p className="mt-1 text-[15px] text-ink-700">
             지금까지 {stats.uniqueDogs}마리의 아이들과 {stats.totalWalks}번 걸었어요.
@@ -131,7 +131,7 @@ function ActivityContent() {
                 <span className={cn("mt-2 text-[13px] font-semibold", done ? "text-ink-900" : "text-ink-400")}>
                   {badge.label}
                 </span>
-                <span className="tnum mt-0.5 text-xs text-ink-400">
+                <span className="tnum mt-0.5 text-[13px] text-ink-400">
                   {done ? "달성" : badge.progress(stats)}
                 </span>
               </li>

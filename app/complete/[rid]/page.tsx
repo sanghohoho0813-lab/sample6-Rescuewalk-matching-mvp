@@ -9,7 +9,7 @@ import EmptyState from "@/components/EmptyState";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
-import { formatDateFullKo, formatTimeKo } from "@/lib/utils";
+import { formatDateFullKo, formatTimeKo, withJosa } from "@/lib/utils";
 
 const PREPARATIONS = ["편한 운동화", "물과 물그릇", "신분증"];
 
@@ -60,7 +60,7 @@ export default function CompletePage() {
         <p className="mt-2 text-[15px] leading-relaxed text-ink-500">
           보호소가 확인하면 방문예정으로 바뀌어요.
           <br />
-          {dog.name}가 {request.applicant.name}님을 기다릴게요.
+          {withJosa(dog.name, "가")} {request.applicant.name}님을 기다릴게요.
         </p>
       </div>
 
