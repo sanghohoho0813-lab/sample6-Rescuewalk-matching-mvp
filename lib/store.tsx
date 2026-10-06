@@ -113,6 +113,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setState(loadPersisted());
     setHydrated(true);
+    // 저장값을 읽어 화면이 실제 데이터로 그려졌다는 신호(E2E 가 네트워크 대신 이 신호를 기다립니다)
+    document.documentElement.dataset.hydrated = "true";
     // 다른 탭에서 신청·찜을 바꾸면 이 탭에도 반영(마지막에 저장한 탭이 다른 탭 내용을 덮어쓰지 않게)
     const onStorage = (e: StorageEvent) => {
       if (e.key === LS_KEY) setState(loadPersisted(e.newValue));

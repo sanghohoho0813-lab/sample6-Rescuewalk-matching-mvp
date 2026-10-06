@@ -1,13 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect } from "./fixtures";
+import { test, expect, gotoReady } from "./fixtures";
 
 const PAGES = ["/", "/dogs", "/dogs/dog-bori", "/dogs/dog-bori/apply", "/requests", "/requests/req-seed-1", "/activity", "/me", "/shelters", "/shelters/sh-love", "/guide"];
 
 test.describe("품질 기준", () => {
   for (const path of PAGES) {
     test(`접근성 위반 0건 — ${path}`, async ({ page }) => {
-      await page.goto(path);
-      await page.waitForLoadState("networkidle");
+      await gotoReady(page, path);
       const { violations } = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
         .analyze();
@@ -22,8 +21,7 @@ test.describe("품질 기준", () => {
     for (const width of [360, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       for (const path of PAGES) {
-        await page.goto(path);
-        await page.waitForLoadState("networkidle");
+        await gotoReady(page, path);
         const o = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         if (o > 1) overflow.push(`${width}px ${path} +${o}px`);
       }
@@ -34,12 +32,14 @@ test.describe("품질 기준", () => {
   test("일반 탐색 중 콘솔 오류·하이드레이션 경고 없음", async ({ page }) => {
     const errors: string[] = [];
     page.on("console", (m) => {
-      if (m.type() === "error" && !m.text().includes("ERR_FAILED")) errors.push(m.text());
+      const text = m.text();
+      // 다음 페이지로 바로 이동하면서 Next 가 화면 안 링크를 미리 받던 요청이 취소될 때 남기는 로그 — 앱 오류가 아님
+      const cancelledPrefetch = text.startsWith("Failed to fetch RSC payload");
+      if (m.type() === "error" && !text.includes("ERR_FAILED") && !cancelledPrefetch) errors.push(text);
     });
     page.on("pageerror", (e) => errors.push(e.message));
     for (const path of PAGES) {
-      await page.goto(path);
-      await page.waitForLoadState("networkidle");
+      await gotoReady(page, path);
     }
     expect(errors).toEqual([]);
   });

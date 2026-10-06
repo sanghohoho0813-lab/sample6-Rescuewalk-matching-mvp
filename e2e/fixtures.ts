@@ -10,6 +10,19 @@ export const test = base.extend({
 });
 export { expect };
 
+/**
+ * 페이지 이동 후 앱이 저장값까지 읽고 그려질 때까지 기다립니다.
+ * 'networkidle' 은 이미지·프리페치가 많은 페이지에서 느린 CI 러너에선 끝나지 않을 수 있어 쓰지 않습니다.
+ */
+export async function gotoReady(page: Page, path: string) {
+  await page.goto(path);
+  await expect(page.locator("html[data-hydrated]")).toHaveCount(1);
+  // 등장 애니메이션(투명도 변화) 중에 색 대비를 재면 실제보다 낮게 나오므로 끝날 때까지 기다립니다
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity)
+  );
+}
+
 export const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 768;
 
 /** 신청 흐름에서 현재 단계의 고를 수 있는 첫 칸 */
