@@ -122,8 +122,8 @@ export const STATUS_LABEL: Record<WalkRequestStatus, string> = {
 export const STATUS_STYLE: Record<WalkRequestStatus, string> = {
   pending: "bg-tangerine-100 text-tangerine-700",
   confirmed: "bg-sage-100 text-sage-700",
-  completed: "bg-sage-500 text-white",
-  cancelled: "bg-ink-300/20 text-ink-400",
+  completed: "bg-sage-600 text-white",
+  cancelled: "bg-ink-300/20 text-ink-500",
 };
 
 export const BADGES: Badge[] = [

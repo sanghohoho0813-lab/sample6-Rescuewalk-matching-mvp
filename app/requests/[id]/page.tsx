@@ -19,6 +19,7 @@ import DogImage, { DogFace } from "@/components/DogImage";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
+import { canCancel } from "@/lib/domain/requests";
 import { cn, formatDateFullKo, formatDateKo, formatTimeKo, relativeDayLabel, todayISO, withJosa } from "@/lib/utils";
 import type { WalkRequest } from "@/lib/types";
 
@@ -130,7 +131,7 @@ export default function RequestDetailPage() {
   const log = activityLogs.find((l) => l.requestId === req.id);
   const today = todayISO();
   const isPast = req.date < today;
-  const canCancel = req.status === "pending" || req.status === "confirmed";
+  const cancellable = canCancel(req);
 
   const doCancel = () => {
     cancelRequest(req.id);
@@ -347,7 +348,7 @@ export default function RequestDetailPage() {
             </dl>
           </section>
 
-          {canCancel && (
+          {cancellable && (
             <div className="mt-6">
               <button
                 type="button"
@@ -437,7 +438,7 @@ export default function RequestDetailPage() {
                 className={cn(
                   "tnum min-h-[44px] rounded-xl border text-sm font-semibold transition-colors",
                   duration === m
-                    ? "border-sage-500 bg-sage-500 text-white"
+                    ? "border-sage-600 bg-sage-600 text-white"
                     : "border-cream-300 bg-white text-ink-700 hover:border-sage-300"
                 )}
               >

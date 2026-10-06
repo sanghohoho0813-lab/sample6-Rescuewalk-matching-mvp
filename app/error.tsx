@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { RotateCcw } from "lucide-react";
+import { STORE_KEY } from "@/lib/storageKeys";
 
 /**
  * 화면을 그리다 예기치 않은 오류가 났을 때.
@@ -10,7 +11,7 @@ import { RotateCcw } from "lucide-react";
 export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const resetData = () => {
     try {
-      localStorage.removeItem("rescuewalk-store-v2");
+      localStorage.removeItem(STORE_KEY);
       sessionStorage.clear();
     } catch {
       /* 무시 */

@@ -10,6 +10,7 @@ import MyWalkTabs from "@/components/MyWalkTabs";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
+import { groupRequests, isOpen, isOverdue } from "@/lib/domain/requests";
 import { cn, formatDateKo, formatTimeKo, relativeDayLabel, todayISO } from "@/lib/utils";
 import type { WalkRequest, WalkRequestStatus } from "@/lib/types";
 
@@ -21,13 +22,13 @@ const FILTERS: { key: WalkRequestStatus | "all"; label: string }[] = [
   { key: "cancelled", label: "취소" },
 ];
 
-const isActive = (r: WalkRequest) => r.status === "pending" || r.status === "confirmed";
 
 function RequestRow({ req, today }: { req: WalkRequest; today: string }) {
   const dog = getDog(req.dogId);
   if (!dog) return null;
   const shelter = getShelter(dog.shelterId);
-  const upcoming = isActive(req) && req.date >= today;
+  const upcoming = isOpen(req) && req.date >= today;
+  const overdue = isOverdue(req, today);
   return (
     <li>
       <Link
@@ -57,6 +58,11 @@ function RequestRow({ req, today }: { req: WalkRequest; today: string }) {
             {upcoming && (
               <span className="tnum font-semibold text-sage-700">{relativeDayLabel(req.date, today)}</span>
             )}
+            {overdue && (
+              <span className="font-semibold text-tangerine-700">
+                {req.status === "confirmed" ? "기록 남기기" : "방문일 지남"}
+              </span>
+            )}
           </span>
           <span className="mt-0.5 block truncate text-sm text-ink-400">{shelter?.name}</span>
         </span>
@@ -78,15 +84,7 @@ export default function RequestsPage() {
   }, [requests]);
 
   // 예정된 산책은 가까운 날짜부터, 지난 신청은 최근 날짜부터
-  const upcoming = useMemo(
-    () => requests.filter(isActive).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)),
-    [requests]
-  );
-  const past = useMemo(
-    () =>
-      requests.filter((r) => !isActive(r)).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)),
-    [requests]
-  );
+  const { open: upcoming, closed: past } = useMemo(() => groupRequests(requests), [requests]);
   const filtered = useMemo(
     () => (filter === "all" ? [] : [...upcoming, ...past].filter((r) => r.status === filter)),
     [filter, upcoming, past]
@@ -94,7 +92,7 @@ export default function RequestsPage() {
 
   return (
     <div className="container-app max-w-3xl py-8 md:py-10">
-      <h1 className="page-title mb-5 md:hidden">신청 내역</h1>
+      <h1 className="page-title mb-5 md:sr-only">신청 내역</h1>
       <div className="hidden md:block">
         <MyWalkTabs />
       </div>

@@ -3,18 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { DOGS_LIST_HREF_KEY, safeSession } from "@/lib/storageKeys";
 
 /** 상세 → 목록으로 돌아갈 때, 보던 필터·정렬 조건을 그대로 유지합니다. */
 export default function BackToDogs() {
   const [href, setHref] = useState("/dogs");
 
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem("rw:dogsHref");
-      if (saved?.startsWith("/dogs")) setHref(saved);
-    } catch {
-      /* 저장소가 막혀 있으면 기본 목록 */
-    }
+    const saved = safeSession.get(DOGS_LIST_HREF_KEY);
+    // 같은 사이트의 목록 주소만 신뢰(다른 값이 들어 있어도 엉뚱한 곳으로 보내지 않게)
+    if (saved && /^\/dogs(\?|$)/.test(saved)) setHref(saved);
   }, []);
 
   return (

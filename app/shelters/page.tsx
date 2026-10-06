@@ -12,6 +12,7 @@ export default function SheltersPage() {
           RescueWalk와 함께하는 보호소 <strong className="tnum font-semibold text-ink-900">{shelters.length}곳</strong>
         </p>
       </header>
+      <h2 className="sr-only">보호소 목록</h2>
       <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {shelters.map((shelter) => (
           <ShelterCard key={shelter.id} shelter={shelter} />

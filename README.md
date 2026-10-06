@@ -30,9 +30,52 @@
 npm install
 npm run dev        # http://localhost:3000
 npm run build      # 프로덕션 빌드
-npm run typecheck  # TypeScript 검사
-npm run lint       # ESLint (next/core-web-vitals)
+
+npm run check      # lint + typecheck + 단위 테스트 (커밋 전 한 번)
+npm test           # 단위 테스트 (Vitest, 도메인 규칙)
+npm run test:e2e   # E2E (Playwright, 데스크톱·모바일) — build 후 실행
 ```
+
+E2E 는 `next start` 를 직접 띄웁니다. 이미 서버가 떠 있으면 `E2E_PORT=3000 npm run test:e2e` 로 재사용합니다.
+처음 한 번은 `npx playwright install chromium` 이 필요합니다.
+
+## 구조
+
+화면(app·components)과 규칙(lib/domain)을 나눴습니다. 규칙은 React·브라우저에 의존하지 않는
+순수 함수라서 단위 테스트로 고정하고, 화면은 그 결과를 그리기만 합니다.
+
+```
+app/                       라우트 (App Router)
+  dogs/page.tsx            목록 — 필터·정렬 상태는 URL 쿼리가 원본
+  dogs/[id]/apply/
+    useApplyFlow.ts        신청 흐름 상태·URL 단계·임시 저장·제출
+    steps.tsx              단계별 화면 (표현만)
+  error.tsx, not-found.tsx 오류·404 화면
+  sitemap.ts, robots.ts, manifest.ts
+components/                공용 UI (Dialog: 포커스 트랩·Esc·스크롤 잠금 / DogRail / Stepper …)
+lib/
+  domain/
+    dogSearch.ts           필터 규칙, URL ↔ 필터 직렬화, 정렬(쉬는 아이는 항상 뒤)
+    apply.ts               당일 마감 시간, 열린 시간 계산, 연락처 형식·검증, 단계 진입 조건, 임시 저장 복원
+    requests.ts            신청 상태 전이(승인·취소·완료), 목록 묶기, 다음 산책
+    persist.ts             브라우저 저장값 검증 (깨진 항목만 걸러냄)
+    *.test.ts              위 규칙의 단위 테스트
+  store.tsx                React Context 스토어 — 액션은 domain 함수를 호출만, 탭 간 동기화
+  storageKeys.ts           저장소 키 + 막힌 환경에서도 안전한 접근자
+  data/                    정적 데이터와 오늘 기준 상대 날짜 시드
+e2e/                       사용자 흐름 E2E + 접근성·레이아웃·콘솔 기준
+```
+
+설계 메모
+
+- **URL 이 상태의 원본** — 목록 조건(`?today=1&region=서울`)과 신청 단계(`?step=3`)를 주소에 둬서
+  공유·새로고침·브라우저 뒤로가기가 모두 자연스럽게 동작합니다. 알 수 없는 쿼리 값은 버립니다.
+- **전이 함수는 멱등** — 허용되지 않는 상태에서 호출되면 원본을 그대로 돌려줘, 중복 클릭·다른 탭과의
+  경합에도 상태가 꼬이지 않습니다. 같은 아이·같은 시간의 열린 신청은 두 번 생기지 않습니다.
+- **제출 직전 재검증** — 확인 화면에 머무는 사이 당일 시간이 지났거나 다른 탭에서 같은 시간을
+  신청했다면, 제출하지 않고 시간 단계로 돌려보내며 이유를 알려줍니다.
+- **저장값은 신뢰하지 않음** — `localStorage` 는 이전 버전·직접 수정으로 깨져 있을 수 있어
+  불러올 때 항목 단위로 검증합니다. 다른 탭의 변경은 `storage` 이벤트로 반영합니다.
 
 ## 주요 화면
 
@@ -149,6 +192,8 @@ MVP는 데모 모드로 동작하지만, 데이터 계층이 교체 가능하게
 - 교체 지점: `lib/store.tsx` 의 `addRequest` / `cancelRequest` / `confirmRequest` / `completeWalk` /
   `toggleFavorite` / `toggleInterestRegion` 액션을 Supabase 쿼리로 대체
   (`confirmRequest` 는 데모 전용 — 실제 서비스에서는 보호소 관리자 화면이 호출)
+- 규칙(`lib/domain/*`)은 저장소와 무관하므로 그대로 재사용합니다. 서버로 옮길 때도 같은 함수로
+  입력을 검증하면 화면과 서버의 판단이 어긋나지 않습니다.
 - 정적 데이터: `lib/data/*.ts` → Supabase 테이블 fetch로 대체
 
 ## 상태 정의
@@ -158,6 +203,8 @@ pending(신청완료) ─ confirmRequest ─▶ confirmed(방문예정) ─ comp
       └──────────── cancelRequest ────────┴──▶ cancelled(취소)
 ```
 
+- 구현과 테스트: `lib/domain/requests.ts`, `lib/domain/requests.test.ts`
+
 - `completeWalk` 는 `activity_logs` 에 기록(`requestId` 연결)을 추가해 통계·배지에 바로 반영됩니다.
 - 각 전이 시각(`confirmedAt` / `completedAt` / `cancelledAt`)을 저장해 신청 상세의 타임라인에 씁니다.
 - Dog Availability: `available` / `unavailable` / `scheduled`
@@ -166,6 +213,10 @@ pending(신청완료) ─ confirmRequest ─▶ confirmed(방문예정) ─ comp
 
 - **색**: 브랜드 sage + 강조 tangerine(화면당 주요 행동에만) + cream/ink 중립 + 의미 색
   (완료=sage, 대기=tangerine, 취소·위험=red). 선택 상태는 sage, 태그는 중립색으로 통일
+- **대비**: 글자가 올라가는 색은 모두 WCAG AA(4.5:1) 이상 — 주요 버튼 `tangerine-600 #B9520C` 위 흰 글자 4.9:1,
+  보조 글자 `ink-400 #766C62` 는 크림 배경에서 5.0:1. 밝은 `tangerine-500` 은 장식(아이콘·하트)에만
+- **키보드**: 본문으로 건너뛰기 링크, 모든 링크·버튼에 같은 포커스 링(`:focus-visible`),
+  신청 단계가 바뀌면 새 단계 제목으로 포커스 이동, 대화상자는 포커스 트랩·Esc
 - **한 화면 한 행동**: 강아지 카드에는 버튼을 두지 않고 카드 전체를 상세 링크로,
   신청은 상세의 단일 CTA로 모음. 신청 상세는 상태별로 행동 하나만 노출
 - **카드 최소화**: 독립된·클릭 가능한 객체에만 카드. 정보 묶음은 구분선·여백·타이포로 구분
@@ -179,11 +230,14 @@ pending(신청완료) ─ confirmRequest ─▶ confirmed(방문예정) ─ comp
 - 토큰은 `app/globals.css` 상단 주석에 정리(radius 12/16/20/24, shadow card/card-hover/overlay,
   `.tnum` = 숫자·날짜 한 덩어리의 줄바꿈 금지 — 여러 항목이 이어지는 목록에는 쓰지 않음)
 
-## QA
+## 품질 기준
 
-Golden Path를 PC(1280)·모바일(390)에서 브라우저 자동화로 클릭해 검증합니다.
-신청 → 새로고침 유지 → 승인 → 기록 → 배지 해금 → 취소 → 관심 지역 저장 → 초기화까지
-상태 변화와, 필터 주소 유지(상세 왕복·뒤로가기), 신청 단계 뒤로/앞으로·새로고침 복원,
-주소로 확인 단계 직접 진입 시 차단, 시트 열림 시 공용 버튼 숨김, 받침 조사,
-날짜·시간 자동 진행, 접수 후 뒤로가기 중복 신청 방지, 빈 데이터·깨진 저장값,
-9개 폭(360~1440) × 11개 경로의 가로 넘침, 콘솔·하이드레이션 경고를 확인합니다(76개 항목).
+CI(`.github/workflows/ci.yml`)가 push·PR 마다 아래를 모두 통과해야 합니다.
+
+| 단계 | 내용 |
+| --- | --- |
+| Lint · Typecheck | ESLint(next/core-web-vitals), `tsc --noEmit` (strict) |
+| 단위 테스트 | `lib/**/*.test.ts` 72개 — 조사, 날짜 경계, 필터·정렬·URL 왕복, 당일 마감·열린 시간, 연락처 형식, 단계 진입 조건, 임시 저장 복원, 상태 전이 멱등성, 저장값 검증 |
+| E2E (데스크톱 1280 · 모바일 Pixel 7) | 홈 → 목록(필터 주소 유지·상세 왕복) → 신청 5단계(자동 진행·검증·포커스·뒤로/앞으로·새로고침 복원) → 접수 → 뒤로가기 중복 신청 방지 → 승인 → 기록 → 배지 → 취소(Esc) → 초기화, 빈 데이터·깨진 저장값·404 |
+| 접근성 | axe-core WCAG 2.1 AA + best-practice 위반 **0건** (주요 11개 화면 × 2개 기기) |
+| 레이아웃 · 콘솔 | 360~1440px 5개 폭 × 11개 화면 가로 스크롤 0, 일반 탐색 중 콘솔 오류·하이드레이션 경고 0 |

@@ -1,8 +1,7 @@
 "use client";
 
+import { ALL_SLOTS } from "@/lib/domain/apply";
 import { cn, formatTimeKo } from "@/lib/utils";
-
-export const ALL_SLOTS = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00"];
 
 export default function TimeSlotPicker({
   availableTimes,
@@ -20,6 +19,13 @@ export default function TimeSlotPicker({
 }) {
   // 이 아이가 원래 산책하지 않는 시간은 보여주지 않습니다(고를 수 없는 칸이 화면을 채우지 않게)
   const slots = ALL_SLOTS.filter((s) => availableTimes.includes(s));
+  if (slots.length === 0) {
+    return (
+      <p className="rounded-2xl bg-cream-100 p-4 text-[15px] text-ink-500">
+        이 날은 신청할 수 있는 시간이 없어요.
+      </p>
+    );
+  }
   return (
     <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
       {slots.map((slot) => {

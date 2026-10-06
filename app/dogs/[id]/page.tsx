@@ -19,7 +19,17 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { id: string } }) {
   const dog = getDog(params.id);
-  return dog ? { title: `${dog.name} · ${dog.breed}`, description: dog.story } : {};
+  if (!dog) return {};
+  const title = `${dog.name} · ${dog.breed}`;
+  return {
+    title,
+    description: dog.story,
+    openGraph: {
+      title: `${title} | RescueWalk`,
+      description: dog.story,
+      images: dog.image ? [{ url: `/images/dogs/${dog.image}`, alt: `${dog.name} 사진` }] : undefined,
+    },
+  };
 }
 
 export default function DogDetailPage({ params }: { params: { id: string } }) {

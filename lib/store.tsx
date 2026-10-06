@@ -10,10 +10,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { ActivityLog, WalkRequest } from "@/lib/types";
+import type { WalkRequest } from "@/lib/types";
+import { sanitizePersisted, type PersistedState } from "@/lib/domain/persist";
+import * as Requests from "@/lib/domain/requests";
 import { SEED_FAVORITES, SEED_INTEREST_REGIONS, buildSeed } from "@/lib/data/seed";
 import { todayISO } from "@/lib/utils";
 import { getDog } from "@/lib/data/dogs";
+import { STORE_KEY } from "@/lib/storageKeys";
 
 /**
  * 데모용 클라이언트 스토어.
@@ -28,18 +31,11 @@ import { getDog } from "@/lib/data/dogs";
  */
 
 // v2: 날짜가 오늘 기준 상대값으로 바뀐 시드. 이전 버전의 고정 날짜 데이터는 버립니다.
-const LS_KEY = "rescuewalk-store-v2";
+const LS_KEY = STORE_KEY;
 
 interface ToastState {
   id: number;
   message: string;
-}
-
-interface PersistedState {
-  favorites: string[];
-  requests: WalkRequest[];
-  activityLogs: ActivityLog[];
-  interestRegions: string[];
 }
 
 interface StoreState extends PersistedState {
@@ -56,6 +52,8 @@ interface StoreState extends PersistedState {
   toggleInterestRegion: (region: string) => void;
   resetDemo: () => void;
   showToast: (message: string) => void;
+  /** 새 신청·기록 id 발급 */
+  newId: (prefix: string) => string;
 }
 
 const StoreContext = createContext<StoreState | null>(null);
@@ -70,63 +68,32 @@ function freshState(): PersistedState {
   };
 }
 
-// 저장값은 사용자가 직접 고치거나 이전 버전이 남긴 것일 수 있으므로, 화면이 깨지지 않게 형태를 확인하고 씁니다
-const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
-const isStr = (v: unknown): v is string => typeof v === "string" && v.length > 0;
-const STATUSES = new Set(["pending", "confirmed", "completed", "cancelled"]);
+const dogExists = (id: string) => !!getDog(id);
 
-function validRequest(v: unknown): v is WalkRequest {
-  return (
-    isObj(v) &&
-    isStr(v.id) &&
-    isStr(v.dogId) &&
-    !!getDog(v.dogId) &&
-    isStr(v.date) &&
-    /^\d{4}-\d{2}-\d{2}$/.test(v.date) &&
-    isStr(v.time) &&
-    STATUSES.has(v.status as string) &&
-    isObj(v.applicant) &&
-    typeof v.applicant.name === "string" &&
-    typeof v.applicant.phone === "string"
-  );
-}
-
-function validLog(v: unknown): v is ActivityLog {
-  return (
-    isObj(v) &&
-    isStr(v.id) &&
-    isStr(v.dogId) &&
-    !!getDog(v.dogId) &&
-    isStr(v.date) &&
-    typeof v.durationMin === "number" &&
-    v.durationMin > 0
-  );
-}
-
-const strings = (v: unknown): string[] | null => (Array.isArray(v) ? v.filter(isStr) : null);
-
-function loadPersisted(): PersistedState {
+function loadPersisted(raw: string | null = readRaw()): PersistedState {
+  if (!raw) return freshState();
   try {
-    const raw = window.localStorage.getItem(LS_KEY);
-    if (!raw) return freshState();
-    const parsed = JSON.parse(raw) as Partial<PersistedState>;
-    const fallback = freshState();
-    return {
-      favorites: strings(parsed.favorites)?.filter((id) => !!getDog(id)) ?? fallback.favorites,
-      requests: Array.isArray(parsed.requests)
-        ? parsed.requests.filter(validRequest).map((r) => ({
-            ...r,
-            applicant: { ...r.applicant, memo: r.applicant.memo ?? "", experienced: !!r.applicant.experienced },
-          }))
-        : fallback.requests,
-      activityLogs: Array.isArray(parsed.activityLogs)
-        ? parsed.activityLogs.filter(validLog).map((l) => ({ ...l, note: typeof l.note === "string" ? l.note : "" }))
-        : fallback.activityLogs,
-      interestRegions: strings(parsed.interestRegions) ?? fallback.interestRegions,
-    };
+    return sanitizePersisted(JSON.parse(raw), freshState(), dogExists);
   } catch {
     return freshState();
   }
+}
+
+function readRaw(): string | null {
+  try {
+    return window.localStorage.getItem(LS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** 브라우저마다 고유한 id. 같은 밀리초에 두 번 눌러도 겹치지 않게 */
+function newId(prefix: string): string {
+  const rand =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+  return `${prefix}-${Date.now().toString(36)}-${rand}`;
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -146,6 +113,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setState(loadPersisted());
     setHydrated(true);
+    // 다른 탭에서 신청·찜을 바꾸면 이 탭에도 반영(마지막에 저장한 탭이 다른 탭 내용을 덮어쓰지 않게)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === LS_KEY) setState(loadPersisted(e.newValue));
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   useEffect(() => {
@@ -172,72 +145,53 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const isFavorite = useCallback(
-    (dogId: string) => state.favorites.includes(dogId),
-    [state.favorites]
-  );
+  const isFavorite = useCallback((dogId: string) => state.favorites.includes(dogId), [state.favorites]);
 
   const addRequest = useCallback((req: WalkRequest) => {
-    setState((s) => ({ ...s, requests: [req, ...s.requests] }));
+    setState((s) =>
+      // 같은 아이·같은 시간에 열린 신청이 이미 있으면 무시(다른 탭에서 먼저 신청한 경우 등)
+      s.requests.some(
+        (r) => Requests.isOpen(r) && r.dogId === req.dogId && r.date === req.date && r.time === req.time
+      )
+        ? s
+        : { ...s, requests: [req, ...s.requests] }
+    );
   }, []);
 
-  const updateRequest = useCallback(
-    (requestId: string, fn: (r: WalkRequest) => WalkRequest) => {
-      setState((s) => ({
-        ...s,
-        requests: s.requests.map((r) => (r.id === requestId ? fn(r) : r)),
-      }));
-    },
-    []
-  );
+  const updateRequest = useCallback((requestId: string, fn: (r: WalkRequest) => WalkRequest) => {
+    setState((s) => ({
+      ...s,
+      requests: s.requests.map((r) => (r.id === requestId ? fn(r) : r)),
+    }));
+  }, []);
 
   const cancelRequest = useCallback(
-    (requestId: string) =>
-      updateRequest(requestId, (r) =>
-        r.status === "pending" || r.status === "confirmed"
-          ? { ...r, status: "cancelled", cancelledAt: new Date().toISOString() }
-          : r
-      ),
+    (requestId: string) => updateRequest(requestId, (r) => Requests.cancel(r, new Date())),
     [updateRequest]
   );
 
   const confirmRequest = useCallback(
-    (requestId: string) =>
-      updateRequest(requestId, (r) =>
-        r.status === "pending"
-          ? { ...r, status: "confirmed", confirmedAt: new Date().toISOString() }
-          : r
-      ),
+    (requestId: string) => updateRequest(requestId, (r) => Requests.confirm(r, new Date())),
     [updateRequest]
   );
 
-  const completeWalk = useCallback(
-    (requestId: string, input: { durationMin: number; note: string }) => {
-      const req = stateRef.current.requests.find((r) => r.id === requestId);
-      if (!req || req.status !== "confirmed") return null;
-      const today = todayISO();
-      const log: ActivityLog = {
-        id: `act-${Date.now()}`,
-        requestId,
-        dogId: req.dogId,
-        // 데모에서는 방문일 전에도 기록할 수 있으므로, 미래 날짜라면 오늘로 기록합니다
-        date: req.date <= today ? req.date : today,
-        durationMin: input.durationMin,
-        note: input.note.trim(),
-      };
-      setState((s) => ({
-        ...s,
-        requests: s.requests.map((r) =>
-          r.id === requestId
-            ? { ...r, status: "completed", completedAt: new Date().toISOString() }
-            : r
-        ),
-        activityLogs: [log, ...s.activityLogs],
-      }));
-      return log.id;
-    },
-    []
-  );
+  const completeWalk = useCallback((requestId: string, input: { durationMin: number; note: string }) => {
+    const req = stateRef.current.requests.find((r) => r.id === requestId);
+    const result =
+      req && Requests.complete(req, input, { now: new Date(), today: todayISO(), logId: newId("act") });
+    if (!result) return null;
+    // 같은 렌더 안에서 두 번 눌러도 기록이 두 개 생기지 않게 ref 도 바로 갱신
+    stateRef.current = {
+      ...stateRef.current,
+      requests: stateRef.current.requests.map((r) => (r.id === requestId ? result.request : r)),
+    };
+    setState((s) => ({
+      ...s,
+      requests: s.requests.map((r) => (r.id === requestId ? result.request : r)),
+      activityLogs: [result.log, ...s.activityLogs],
+    }));
+    return result.log.id;
+  }, []);
 
   const toggleInterestRegion = useCallback((region: string) => {
     setState((s) => ({
@@ -266,6 +220,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleInterestRegion,
       resetDemo,
       showToast,
+      newId,
     }),
     [
       state,

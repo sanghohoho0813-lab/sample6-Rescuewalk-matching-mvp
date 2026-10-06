@@ -178,7 +178,7 @@ function ActivityContent() {
                       {formatDateKo(log.date)} · {log.durationMin}분
                     </span>
                     {isNew && (
-                      <span className="chip bg-sage-500 font-semibold text-white">새 기록</span>
+                      <span className="chip bg-sage-600 font-semibold text-white">새 기록</span>
                     )}
                   </span>
                   {log.note && (
@@ -210,7 +210,7 @@ function ActivityContent() {
 export default function ActivityPage() {
   return (
     <div className="container-app max-w-3xl py-8 md:py-10">
-      <h1 className="page-title mb-5 md:hidden">활동 기록</h1>
+      <h1 className="page-title mb-5 md:sr-only">활동 기록</h1>
       <div className="hidden md:block">
         <MyWalkTabs />
       </div>

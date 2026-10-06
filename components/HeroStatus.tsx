@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { DogFace } from "@/components/DogImage";
 import { getDog } from "@/lib/data/dogs";
 import { useStore } from "@/lib/store";
+import { nextWalk } from "@/lib/domain/requests";
 import { formatDateKo, formatTimeKo, relativeDayLabel, todayISO, withJosa } from "@/lib/utils";
 
 /**
@@ -15,11 +16,7 @@ import { formatDateKo, formatTimeKo, relativeDayLabel, todayISO, withJosa } from
 export default function HeroStatus({ todayCount, shelterCount }: { todayCount: number; shelterCount: number }) {
   const { requests, hydrated } = useStore();
   const today = todayISO();
-  const next = hydrated
-    ? requests
-        .filter((r) => (r.status === "pending" || r.status === "confirmed") && r.date >= today)
-        .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0]
-    : undefined;
+  const next = hydrated ? nextWalk(requests, today) : undefined;
   const dog = next ? getDog(next.dogId) : undefined;
 
   if (next && dog) {

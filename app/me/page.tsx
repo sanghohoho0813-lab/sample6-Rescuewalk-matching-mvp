@@ -9,6 +9,7 @@ import Dialog from "@/components/Dialog";
 import EmptyState from "@/components/EmptyState";
 import { dogs } from "@/lib/data/dogs";
 import { useStore } from "@/lib/store";
+import { isOpen } from "@/lib/domain/requests";
 import { cn, computeStats } from "@/lib/utils";
 
 const REGIONS = ["서울", "인천", "경기", "대전", "부산"];
@@ -28,7 +29,7 @@ export default function MyPage() {
 
   const stats = computeStats(activityLogs);
   const favoriteDogs = dogs.filter((d) => favorites.includes(d.id));
-  const upcoming = requests.filter((r) => r.status === "pending" || r.status === "confirmed").length;
+  const upcoming = requests.filter(isOpen).length;
 
   return (
     <div className="container-app max-w-4xl py-8 md:py-12">

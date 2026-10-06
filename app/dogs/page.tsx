@@ -7,119 +7,24 @@ import DogCard from "@/components/DogCard";
 import Dialog from "@/components/Dialog";
 import EmptyState from "@/components/EmptyState";
 import { dogs } from "@/lib/data/dogs";
-import { shelters, getShelter } from "@/lib/data/shelters";
+import { shelters } from "@/lib/data/shelters";
+import {
+  DIFFICULTIES,
+  EMPTY_FILTERS,
+  REGIONS,
+  SIZES,
+  SORTS,
+  TRAITS,
+  activeFilterChips,
+  parseDogQuery,
+  searchDogs,
+  toDogQuery,
+  type DogFilters,
+  type SortKey,
+} from "@/lib/domain/dogSearch";
+import { DOGS_LIST_HREF_KEY, safeSession } from "@/lib/storageKeys";
 import { cn } from "@/lib/utils";
-import type { Dog } from "@/lib/types";
 
-const REGIONS = ["서울", "인천", "경기", "대전", "부산"] as const;
-const SIZES = ["소형", "중형", "대형"] as const;
-const DIFFICULTIES = ["쉬움", "보통", "어려움"] as const;
-const TRAITS = ["초보 가능", "사람 좋아함", "애교많음", "차분해요", "온순한 성격", "밝고 발랄"] as const;
-
-const SORTS = [
-  { key: "recommended", label: "추천순" },
-  { key: "distance", label: "가까운 순" },
-  { key: "today", label: "오늘 가능한 순" },
-  { key: "recent", label: "최근 등록순" },
-] as const;
-type SortKey = (typeof SORTS)[number]["key"];
-
-interface Filters {
-  region: string | null;
-  shelterId: string | null;
-  size: string | null;
-  difficulty: string | null;
-  traits: string[];
-  todayOnly: boolean;
-}
-
-const EMPTY: Filters = {
-  region: null,
-  shelterId: null,
-  size: null,
-  difficulty: null,
-  traits: [],
-  todayOnly: false,
-};
-
-/**
- * 필터·정렬은 URL 에 둡니다.
- * - 상세로 갔다가 뒤로 오면 같은 조건 그대로
- * - 홈의 "오늘 가능한 N마리 모두 보기" 처럼 조건이 걸린 링크로 바로 열 수 있음
- */
-function readParams(sp: URLSearchParams): { filters: Filters; sort: SortKey } {
-  const pick = <T extends string>(v: string | null, allowed: readonly T[]) =>
-    v && (allowed as readonly string[]).includes(v) ? (v as T) : null;
-  const shelterId = sp.get("shelter");
-  return {
-    filters: {
-      region: pick(sp.get("region"), REGIONS),
-      shelterId: shelterId && getShelter(shelterId) ? shelterId : null,
-      size: pick(sp.get("size"), SIZES),
-      difficulty: pick(sp.get("level"), DIFFICULTIES),
-      traits: (sp.get("trait") ?? "").split(",").filter((t) => (TRAITS as readonly string[]).includes(t)),
-      todayOnly: sp.get("today") === "1",
-    },
-    sort:
-      pick(
-        sp.get("sort"),
-        SORTS.map((s) => s.key)
-      ) ?? "recommended",
-  };
-}
-
-function toQuery(f: Filters, sort: SortKey): string {
-  const q = new URLSearchParams();
-  if (f.todayOnly) q.set("today", "1");
-  if (f.region) q.set("region", f.region);
-  if (f.shelterId) q.set("shelter", f.shelterId);
-  if (f.size) q.set("size", f.size);
-  if (f.difficulty) q.set("level", f.difficulty);
-  if (f.traits.length) q.set("trait", f.traits.join(","));
-  if (sort !== "recommended") q.set("sort", sort);
-  const s = q.toString();
-  return s ? `?${s}` : "";
-}
-
-const isWalkableToday = (d: Dog) => d.availableToday && d.availability === "available";
-
-function matches(dog: Dog, f: Filters): boolean {
-  const shelter = getShelter(dog.shelterId);
-  if (f.region && shelter?.region !== f.region) return false;
-  if (f.shelterId && dog.shelterId !== f.shelterId) return false;
-  if (f.size && dog.size !== f.size) return false;
-  if (f.difficulty && dog.difficulty !== f.difficulty) return false;
-  if (f.todayOnly && !isWalkableToday(dog)) return false;
-  if (f.traits.length > 0) {
-    const beginner = f.traits.includes("초보 가능");
-    const rest = f.traits.filter((t) => t !== "초보 가능");
-    if (beginner && !dog.walkNote.beginnerFriendly) return false;
-    if (rest.length > 0 && !rest.some((t) => dog.personality.includes(t))) return false;
-  }
-  return true;
-}
-
-function sortDogs(list: Dog[], sort: SortKey): Dog[] {
-  const bySort = (a: Dog, b: Dog) => {
-    switch (sort) {
-      case "distance":
-        return a.distanceKm - b.distanceKm;
-      case "today":
-        return Number(isWalkableToday(b)) - Number(isWalkableToday(a)) || a.distanceKm - b.distanceKm;
-      case "recent":
-        return b.registeredAt.localeCompare(a.registeredAt);
-      default:
-        return (
-          Number(b.recommended) - Number(a.recommended) ||
-          Number(isWalkableToday(b)) - Number(isWalkableToday(a)) ||
-          a.distanceKm - b.distanceKm
-        );
-    }
-  };
-  // 지금 신청할 수 없는(쉬는 중) 아이는 어떤 정렬에서도 맨 뒤로
-  const resting = (d: Dog) => Number(d.availability === "unavailable");
-  return [...list].sort((a, b) => resting(a) - resting(b) || bySort(a, b));
-}
 
 function Chip({
   active,
@@ -160,16 +65,11 @@ function FilterPanel({
   filters,
   update,
 }: {
-  filters: Filters;
-  update: (fn: (f: Filters) => Filters) => void;
+  filters: DogFilters;
+  update: (fn: (f: DogFilters) => DogFilters) => void;
 }) {
-  const one = (key: "region" | "size" | "difficulty", value: string) =>
-    update((f) => ({
-      ...f,
-      [key]: f[key] === value ? null : value,
-      // 지역이 바뀌면 다른 지역의 보호소 선택은 풀어줍니다
-      ...(key === "region" ? { shelterId: null } : {}),
-    }));
+  // 단일 선택: 같은 값을 다시 누르면 해제
+  const toggle = <T,>(current: T | null, value: T) => (current === value ? null : value);
   const shelterOptions = filters.region ? shelters.filter((s) => s.region === filters.region) : shelters;
 
   return (
@@ -183,7 +83,7 @@ function FilterPanel({
       <FilterGroup title="지역 · 보호소">
         <div className="flex flex-wrap gap-2">
           {REGIONS.map((r) => (
-            <Chip key={r} active={filters.region === r} onClick={() => one("region", r)}>
+            <Chip key={r} active={filters.region === r} onClick={() => update((f) => ({ ...f, region: toggle(f.region, r), shelterId: null }))}>
               {r}
             </Chip>
           ))}
@@ -212,7 +112,7 @@ function FilterPanel({
       <FilterGroup title="크기">
         <div className="flex flex-wrap gap-2">
           {SIZES.map((s) => (
-            <Chip key={s} active={filters.size === s} onClick={() => one("size", s)}>
+            <Chip key={s} active={filters.size === s} onClick={() => update((f) => ({ ...f, size: toggle(f.size, s) }))}>
               {s}견
             </Chip>
           ))}
@@ -222,7 +122,7 @@ function FilterPanel({
       <FilterGroup title="산책 난이도">
         <div className="flex flex-wrap gap-2">
           {DIFFICULTIES.map((d) => (
-            <Chip key={d} active={filters.difficulty === d} onClick={() => one("difficulty", d)}>
+            <Chip key={d} active={filters.difficulty === d} onClick={() => update((f) => ({ ...f, difficulty: toggle(f.difficulty, d) }))}>
               {d}
             </Chip>
           ))}
@@ -253,60 +153,25 @@ function FilterPanel({
 
 function DogsBrowser() {
   const sp = useSearchParams();
-  const { filters, sort } = useMemo(() => readParams(new URLSearchParams(sp.toString())), [sp]);
+  const { filters, sort } = useMemo(() => parseDogQuery(new URLSearchParams(sp.toString())), [sp]);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // URL 만 바꿉니다(서버 왕복 없이). Next 14.1+ 는 history API 변경을 useSearchParams 와 동기화합니다.
-  const commit = useCallback((f: Filters, s: SortKey) => {
-    window.history.replaceState(null, "", `/dogs${toQuery(f, s)}`);
+  const commit = useCallback((f: DogFilters, s: SortKey) => {
+    window.history.replaceState(null, "", `/dogs${toDogQuery(f, s)}`);
   }, []);
   const update = useCallback(
-    (fn: (f: Filters) => Filters) => commit(fn(filters), sort),
+    (fn: (f: DogFilters) => DogFilters) => commit(fn(filters), sort),
     [commit, filters, sort]
   );
 
   // 상세의 "← 강아지 찾기" 가 이 조건 그대로 돌아올 수 있게 기억
   useEffect(() => {
-    try {
-      sessionStorage.setItem("rw:dogsHref", `/dogs${toQuery(filters, sort)}`);
-    } catch {
-      /* 저장소가 막혀 있으면 기본 목록으로 돌아감 */
-    }
+    safeSession.set(DOGS_LIST_HREF_KEY, `/dogs${toDogQuery(filters, sort)}`);
   }, [filters, sort]);
 
-  const result = useMemo(
-    () =>
-      sortDogs(
-        dogs.filter((d) => matches(d, filters)),
-        sort
-      ),
-    [filters, sort]
-  );
-
-  const active: { label: string; clear: (f: Filters) => Filters }[] = [
-    ...(filters.todayOnly
-      ? [{ label: "오늘 산책 가능", clear: (f: Filters) => ({ ...f, todayOnly: false }) }]
-      : []),
-    ...(filters.region
-      ? [{ label: filters.region, clear: (f: Filters) => ({ ...f, region: null, shelterId: null }) }]
-      : []),
-    ...(filters.shelterId
-      ? [
-          {
-            label: getShelter(filters.shelterId)?.name ?? "",
-            clear: (f: Filters) => ({ ...f, shelterId: null }),
-          },
-        ]
-      : []),
-    ...(filters.size ? [{ label: `${filters.size}견`, clear: (f: Filters) => ({ ...f, size: null }) }] : []),
-    ...(filters.difficulty
-      ? [{ label: `산책 ${filters.difficulty}`, clear: (f: Filters) => ({ ...f, difficulty: null }) }]
-      : []),
-    ...filters.traits.map((t) => ({
-      label: t,
-      clear: (f: Filters) => ({ ...f, traits: f.traits.filter((x) => x !== t) }),
-    })),
-  ];
+  const result = useMemo(() => searchDogs(dogs, filters, sort), [filters, sort]);
+  const active = activeFilterChips(filters);
   // 모바일 상단의 '오늘 가능' 빠른 토글과 별개로, 시트 안에서만 바꿀 수 있는 조건 수
   const sheetCount = active.length - (filters.todayOnly ? 1 : 0);
 
@@ -391,9 +256,9 @@ function DogsBrowser() {
             <div className="mb-6 flex flex-wrap items-center gap-2">
               {active.map((a) => (
                 <button
-                  key={a.label}
+                  key={a.key}
                   type="button"
-                  onClick={() => update(a.clear)}
+                  onClick={() => commit(a.without, sort)}
                   aria-label={`${a.label} 조건 해제`}
                   className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-sage-100 pl-3.5 pr-2.5 text-sm font-medium text-sage-800 hover:bg-sage-200"
                 >
@@ -403,7 +268,7 @@ function DogsBrowser() {
               ))}
               <button
                 type="button"
-                onClick={() => commit(EMPTY, sort)}
+                onClick={() => commit(EMPTY_FILTERS, sort)}
                 className="min-h-[36px] px-2 text-sm font-medium text-ink-500 underline-offset-4 hover:text-ink-900 hover:underline"
               >
                 모두 해제
@@ -411,11 +276,12 @@ function DogsBrowser() {
             </div>
           )}
 
+          <h2 className="sr-only">검색 결과</h2>
           {result.length === 0 ? (
             <EmptyState
               message={"조건에 맞는 아이를 찾지 못했어요.\n조건을 조금만 넓혀볼까요?"}
               ctaLabel="필터 모두 해제"
-              onAction={() => commit(EMPTY, sort)}
+              onAction={() => commit(EMPTY_FILTERS, sort)}
             />
           ) : (
             <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
@@ -433,7 +299,7 @@ function DogsBrowser() {
         title="필터"
         footer={
           <>
-            <button type="button" onClick={() => commit(EMPTY, sort)} className="btn-secondary flex-1">
+            <button type="button" onClick={() => commit(EMPTY_FILTERS, sort)} className="btn-secondary flex-1">
               모두 해제
             </button>
             <button type="button" onClick={() => setSheetOpen(false)} className="btn-primary flex-[2]">
