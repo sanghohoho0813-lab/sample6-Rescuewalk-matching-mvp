@@ -1,5 +1,7 @@
 # RescueWalk — 유기견 산책 매칭 MVP 🐾
 
+[![CI](https://github.com/sanghohoho0813-lab/sample6-Rescuewalk-matching-mvp/actions/workflows/ci.yml/badge.svg)](https://github.com/sanghohoho0813-lab/sample6-Rescuewalk-matching-mvp/actions/workflows/ci.yml)
+
 > 산책이 필요한 아이와, 함께 걸어줄 당신을 연결합니다.
 
 유기견 보호소의 강아지와 산책 봉사자를 연결하는 반응형 웹앱 MVP입니다.
