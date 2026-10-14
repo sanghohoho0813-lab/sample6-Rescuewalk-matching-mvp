@@ -1,11 +1,14 @@
 "use client";
 
-import type { MutableRefObject, ReactNode } from "react";
+import { useRef, type MutableRefObject, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertCircle, Check } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check, MapPin } from "lucide-react";
 import TimeSlotPicker from "@/components/TimeSlotPicker";
 import DogImage, { DogFace } from "@/components/DogImage";
-import { CAUTIONS, MEMO_MAX, NAME_MAX, formatPhone } from "@/lib/domain/apply";
+import { MEMO_MAX, NAME_MAX, SAFETY_PROMISES, formatPhone } from "@/lib/domain/apply";
+import { pastSlots, scheduledSlots, weekdayOf } from "@/lib/domain/schedule";
+import { EXPERIENCE } from "@/lib/labels";
+import { ARRIVE_EARLY_MIN } from "@/lib/visitGuide";
 import { cn, formatDateKo, formatTimeKo, withJosa } from "@/lib/utils";
 import type { Dog, Shelter } from "@/lib/types";
 import type { ApplyFlow } from "./useApplyFlow";
@@ -23,80 +26,120 @@ function StepSection({ title, desc, children }: { title: ReactNode; desc?: React
   );
 }
 
-const WEEKDAY_TONE: Record<string, string> = { 일: "text-red-500", 토: "text-sage-600" };
-
-export function DateStep({ flow }: { flow: ApplyFlow }) {
-  const { dates, draft, openSlots, pickDate } = flow;
-  return (
-    <StepSection title="언제 함께 걸을까요?" desc="앞으로 2주 안에서 고를 수 있어요.">
-      <div className="mt-5 grid grid-cols-4 gap-2 sm:grid-cols-7">
-        {dates.map((d) => {
-          const full = openSlots(d.iso).length === 0;
-          const selected = draft.date === d.iso;
-          return (
-            <button
-              key={d.iso}
-              type="button"
-              disabled={full}
-              onClick={() => pickDate(d.iso)}
-              aria-pressed={selected}
-              aria-label={`${formatDateKo(d.iso)}${d.isToday ? " 오늘" : ""}${full ? " (마감)" : ""}`}
-              className={cn(
-                "flex min-h-[64px] flex-col items-center justify-center rounded-2xl border transition-colors duration-150",
-                selected && "border-sage-600 bg-sage-600 text-white",
-                !selected && !full && "border-cream-300 bg-white hover:border-sage-400",
-                full && "cursor-not-allowed border-transparent bg-cream-100 text-ink-300"
-              )}
-            >
-              <span
-                className={cn(
-                  "text-[13px]",
-                  selected
-                    ? "text-white/80"
-                    : full
-                      ? "text-ink-300"
-                      : (WEEKDAY_TONE[d.weekday] ?? "text-ink-400")
-                )}
-              >
-                {d.isToday ? "오늘" : d.weekday}
-              </span>
-              <span className={cn("tnum text-base font-semibold", !selected && !full && "text-ink-900")}>
-                {d.day}
-              </span>
-              {full && <span className="text-xs">마감</span>}
-            </button>
-          );
-        })}
-      </div>
-    </StepSection>
-  );
+/** 입력 칸 아래 '왜 필요한지' 한 줄 */
+function Why({ children }: { children: ReactNode }) {
+  return <p className="mt-1.5 text-[13px] text-ink-500">{children}</p>;
 }
 
-export function TimeStep({ flow, dog }: { flow: ApplyFlow; dog: Dog }) {
-  const { draft, booked, pastSlots, pickTime, notice } = flow;
-  if (!draft.date) return null;
+const DAY = ["일", "월", "화", "수", "목", "금", "토"];
+const WEEKDAY_TONE: Record<number, string> = { 0: "text-red-600", 6: "text-sage-700" };
+
+/** 1단계 — 날짜와 시간을 한 화면에서 */
+export function ScheduleStep({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog; shelter?: Shelter }) {
+  const { days, draft, pickDate, pickTime, booked, notice, today } = flow;
+  const selected = days.find((d) => d.date === draft.date);
+  const timesRef = useRef<HTMLDivElement>(null);
+  // 모바일에서는 날짜 칸이 화면을 채우므로, 날짜를 고르면 시간 목록이 보이도록 내려줍니다
+  const onPickDate = (iso: string) => {
+    pickDate(iso);
+    requestAnimationFrame(() => {
+      const el = timesRef.current;
+      if (el && el.getBoundingClientRect().bottom > window.innerHeight - 120) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  };
   return (
     <StepSection
-      title={`${formatDateKo(draft.date)}, 몇 시가 좋을까요?`}
-      desc={`${withJosa(dog.name, "가")} 산책하는 시간이에요. 추천 산책 시간은 ${dog.walkNote.recommendedDuration}이에요.`}
+      title="언제 함께 걸을까요?"
+      desc={`${withJosa(dog.name, "가")} 산책하는 날만 고를 수 있어요. 보호소 휴무일은 빠져 있어요.`}
     >
       {notice && (
         <p
           role="alert"
           className="mt-4 flex items-start gap-2 rounded-2xl bg-tangerine-50 p-3.5 text-[15px] text-ink-900"
         >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-tangerine-600" aria-hidden />
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-tangerine-700" aria-hidden />
           {notice}
         </p>
       )}
-      <div className="mt-5">
-        <TimeSlotPicker
-          availableTimes={dog.availableTimes}
-          bookedTimes={booked.get(draft.date) ?? []}
-          pastTimes={pastSlots(draft.date)}
-          value={draft.time}
-          onChange={pickTime}
-        />
+      <div className="mt-5 grid grid-cols-4 gap-2 sm:grid-cols-7">
+        {days.map((d) => {
+          const [, , dd] = d.date.split("-").map(Number);
+          const wd = weekdayOf(d.date);
+          const full = d.open.length === 0;
+          const isSel = draft.date === d.date;
+          const reason = d.closed
+            ? "휴무"
+            : full
+              ? shelter && scheduledSlots(dog, shelter, d.date).length > 0
+                ? "마감"
+                : "쉬는 날"
+              : null;
+          return (
+            <button
+              key={d.date}
+              type="button"
+              disabled={full}
+              onClick={() => onPickDate(d.date)}
+              aria-pressed={isSel}
+              aria-label={`${formatDateKo(d.date)}${d.date === today ? " 오늘" : ""}${reason ? ` (${reason})` : ` ${d.open.length}개 시간 가능`}`}
+              className={cn(
+                "flex min-h-[68px] flex-col items-center justify-center rounded-2xl border transition-colors duration-150",
+                isSel && "border-sage-600 bg-sage-600 text-white",
+                !isSel && !full && "border-cream-300 bg-white hover:border-sage-400",
+                full && "cursor-not-allowed border-transparent bg-cream-100 text-ink-400"
+              )}
+            >
+              <span
+                className={cn(
+                  "text-[13px]",
+                  isSel ? "text-white" : full ? "text-ink-400" : (WEEKDAY_TONE[wd] ?? "text-ink-500")
+                )}
+              >
+                {d.date === today ? "오늘" : DAY[wd]}
+              </span>
+              <span className={cn("tnum text-base font-semibold", !isSel && !full && "text-ink-900")}>
+                {dd}
+              </span>
+              <span
+                className={cn("text-[13px]", isSel ? "text-white" : full ? "text-ink-400" : "text-sage-700")}
+              >
+                {reason ?? `${d.open.length}타임`}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div ref={timesRef} className="mt-7 scroll-mb-32" aria-live="polite">
+        {selected ? (
+          <>
+            <h3 className="text-[15px] font-semibold text-ink-900">
+              {formatDateKo(selected.date)} · 시간을 골라주세요
+            </h3>
+            <p className="mt-0.5 text-sm text-ink-500">
+              추천 산책 시간은 {dog.walkNote.recommendedDuration}이에요.
+            </p>
+            <div className="mt-3">
+              <TimeSlotPicker
+                availableTimes={shelter ? scheduledSlots(dog, shelter, selected.date) : []}
+                bookedTimes={booked.get(selected.date) ?? []}
+                pastTimes={
+                  today && shelter
+                    ? pastSlots(scheduledSlots(dog, shelter, selected.date), selected.date, new Date(), today)
+                    : []
+                }
+                value={draft.time}
+                onChange={pickTime}
+              />
+            </div>
+          </>
+        ) : (
+          <p className="rounded-2xl bg-cream-100 p-4 text-[15px] text-ink-500">
+            날짜를 고르면 가능한 시간이 보여요.
+          </p>
+        )}
       </div>
     </StepSection>
   );
@@ -105,7 +148,7 @@ export function TimeStep({ flow, dog }: { flow: ApplyFlow; dog: Dog }) {
 function FieldError({ id, children }: { id: string; children?: string }) {
   if (!children) return null;
   return (
-    <p id={id} className="mt-1.5 flex items-center gap-1 text-sm text-red-600">
+    <p id={id} className="mt-1.5 flex items-center gap-1 text-sm text-red-700">
       <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
       {children}
     </p>
@@ -119,17 +162,20 @@ export type InfoFieldRefs = MutableRefObject<{
   experienced?: HTMLButtonElement | null;
 }>;
 
-export function InfoStep({ flow, fieldRefs }: { flow: ApplyFlow; fieldRefs: InfoFieldRefs }) {
-  const { draft, update, errors, showErrors } = flow;
+/** 2단계 — 보호소가 실제로 쓰는 정보만, 왜 필요한지와 함께 */
+export function InfoStep({ flow, dog, fieldRefs }: { flow: ApplyFlow; dog: Dog; fieldRefs: InfoFieldRefs }) {
+  const { draft, update, errors, showErrors, gate } = flow;
   const err = showErrors ? errors : {};
   const refs = fieldRefs.current;
+  // 경험 제한은 고르는 즉시 알려줍니다(다음을 눌러 보고 나서야 알면 늦으니까)
+  const expError = err.experienced ?? (gate === "block" ? errors.experienced : undefined);
 
   return (
     <StepSection
-      title="참여자 정보를 알려주세요"
-      desc="보호소가 확인 연락을 드릴 때 사용해요. 데모 계정 정보가 미리 입력되어 있어요."
+      title="누가 함께 걷나요?"
+      desc="보호소가 확인 연락과 첫 안내를 준비하는 데 쓰여요. 데모 계정 정보가 미리 들어 있어요."
     >
-      <div className="mt-6 space-y-5">
+      <div className="mt-6 space-y-6">
         <div>
           <label htmlFor="f-name" className="mb-1.5 block text-sm font-semibold text-ink-700">
             이름
@@ -145,10 +191,15 @@ export function InfoStep({ flow, fieldRefs }: { flow: ApplyFlow; fieldRefs: Info
             autoComplete="name"
             enterKeyHint="next"
             aria-invalid={!!err.name}
-            aria-describedby={err.name ? "e-name" : undefined}
+            aria-describedby={err.name ? "e-name" : "w-name"}
             className={cn("input-field", err.name && "input-error")}
           />
           <FieldError id="e-name">{err.name}</FieldError>
+          {!err.name && (
+            <Why>
+              <span id="w-name">현장에서 봉사자 명단과 맞춰봐요.</span>
+            </Why>
+          )}
         </div>
         <div>
           <label htmlFor="f-phone" className="mb-1.5 block text-sm font-semibold text-ink-700">
@@ -167,14 +218,19 @@ export function InfoStep({ flow, fieldRefs }: { flow: ApplyFlow; fieldRefs: Info
             enterKeyHint="done"
             placeholder="010-0000-0000"
             aria-invalid={!!err.phone}
-            aria-describedby={err.phone ? "e-phone" : undefined}
+            aria-describedby={err.phone ? "e-phone" : "w-phone"}
             className={cn("input-field tnum", err.phone && "input-error")}
           />
           <FieldError id="e-phone">{err.phone}</FieldError>
+          {!err.phone && (
+            <Why>
+              <span id="w-phone">승인 문자와 방문 전날 안내를 이 번호로 보내요.</span>
+            </Why>
+          )}
         </div>
-        <fieldset aria-describedby={err.experienced ? "e-exp" : undefined}>
+        <fieldset aria-describedby={expError ? "e-exp" : "w-exp"}>
           <legend className="mb-1.5 block text-sm font-semibold text-ink-700">
-            산책 봉사 경험이 있나요?
+            산책 봉사를 해본 적이 있나요?
           </legend>
           <div className="grid grid-cols-2 gap-2.5">
             {[
@@ -195,7 +251,7 @@ export function InfoStep({ flow, fieldRefs }: { flow: ApplyFlow; fieldRefs: Info
                     ? "border-sage-600 bg-sage-600 text-white"
                     : cn(
                         "bg-white text-ink-700 hover:border-sage-400",
-                        err.experienced ? "border-red-400" : "border-cream-300"
+                        expError ? "border-red-400" : "border-cream-300"
                       )
                 )}
               >
@@ -203,11 +259,44 @@ export function InfoStep({ flow, fieldRefs }: { flow: ApplyFlow; fieldRefs: Info
               </button>
             ))}
           </div>
-          <FieldError id="e-exp">{err.experienced}</FieldError>
-          {draft.experienced === false && (
+          {gate === "block" ? (
+            <div
+              id="e-exp"
+              role="alert"
+              className="mt-3 rounded-2xl bg-tangerine-50 p-4 text-[15px] leading-relaxed text-ink-900"
+            >
+              <p className="flex items-start gap-2 font-semibold">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-tangerine-700" aria-hidden />
+                {withJosa(dog.name, "는")} 경험이 있는 분만 산책할 수 있어요
+              </p>
+              <p className="mt-1 pl-6 text-ink-700">
+                힘이 세서 처음이면 놓칠 위험이 있어요. 처음 봉사라면 초보도 편하게 걸을 수 있는 아이부터
+                만나보세요.
+              </p>
+              <Link
+                href="/dogs?need=beginner"
+                className="btn-secondary mt-3 ml-6 !min-h-[40px] !px-4 text-sm"
+              >
+                초보 가능한 아이 보기
+              </Link>
+            </div>
+          ) : (
+            <FieldError id="e-exp">{err.experienced}</FieldError>
+          )}
+          {gate === "caution" && (
+            <p className="mt-2.5 text-sm text-tangerine-700">
+              {EXPERIENCE[dog.match.experience].long}. 처음이라면 매니저가 첫 10분을 함께 걸어요.
+            </p>
+          )}
+          {gate === "ok" && draft.experienced === false && (
             <p className="mt-2.5 text-sm text-sage-700">
               처음이어도 괜찮아요. 보호소에서 리드줄 잡는 법부터 안내해드려요.
             </p>
+          )}
+          {!expError && draft.experienced === null && (
+            <Why>
+              <span id="w-exp">경험에 맞춰 매니저가 첫 안내를 준비해요.</span>
+            </Why>
           )}
         </fieldset>
         <div>
@@ -216,7 +305,7 @@ export function InfoStep({ flow, fieldRefs }: { flow: ApplyFlow; fieldRefs: Info
             className="mb-1.5 flex items-baseline justify-between text-sm font-semibold text-ink-700"
           >
             보호소에 남길 말
-            <span className="font-normal text-ink-400" aria-live="polite">
+            <span className="font-normal text-ink-500" aria-live="polite">
               선택 · {draft.memo.length}/{MEMO_MAX}
             </span>
           </label>
@@ -225,7 +314,7 @@ export function InfoStep({ flow, fieldRefs }: { flow: ApplyFlow; fieldRefs: Info
             value={draft.memo}
             onChange={(e) => update({ memo: e.target.value.slice(0, MEMO_MAX) })}
             rows={3}
-            placeholder="궁금한 점이나 전하고 싶은 말이 있다면 적어주세요."
+            placeholder="예: 아이와 함께 가요, 조금 늦을 수 있어요"
             className="input-field resize-none"
           />
         </div>
@@ -234,64 +323,39 @@ export function InfoStep({ flow, fieldRefs }: { flow: ApplyFlow; fieldRefs: Info
   );
 }
 
-export function PromiseStep({ flow }: { flow: ApplyFlow }) {
-  const { draft, update } = flow;
-  const all = draft.agreed.every(Boolean);
-  return (
-    <StepSection title="산책 전에 약속해주세요" desc="아이들의 안전을 위한 약속이에요.">
-      <button
-        type="button"
-        onClick={() => update({ agreed: CAUTIONS.map(() => !all) })}
-        aria-pressed={all}
-        className="mt-5 flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-cream-300 bg-white px-4 text-left"
-      >
-        <span
-          aria-hidden
-          className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors",
-            all ? "border-sage-600 bg-sage-600 text-white" : "border-cream-300"
-          )}
-        >
-          {all && <Check className="h-4 w-4" strokeWidth={3} />}
-        </span>
-        <span className="text-base font-semibold text-ink-900">모두 확인했어요</span>
-      </button>
-      <ul className="mt-2 divide-y divide-cream-200">
-        {CAUTIONS.map((caution, i) => (
-          <li key={caution}>
-            <button
-              type="button"
-              onClick={() => update({ agreed: draft.agreed.map((v, idx) => (idx === i ? !v : v)) })}
-              aria-pressed={draft.agreed[i]}
-              className="flex min-h-[52px] w-full items-center gap-3 px-4 py-3 text-left"
-            >
-              <Check
-                aria-hidden
-                className={cn("h-5 w-5 shrink-0", draft.agreed[i] ? "text-sage-600" : "text-cream-300")}
-                strokeWidth={3}
-              />
-              <span className="text-[15px] leading-relaxed text-ink-700">{caution}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </StepSection>
-  );
-}
-
+/** 3단계 — 내용 확인 + 현장에서 꼭 지킬 세 가지 */
 export function ReviewStep({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog; shelter?: Shelter }) {
-  const { draft, goTo } = flow;
+  const { draft, goTo, update, showErrors } = flow;
   if (!draft.date || !draft.time) return null;
-  const rows = [
-    { label: "날짜", value: formatDateKo(draft.date), step: 0 },
-    { label: "시간", value: formatTimeKo(draft.time), step: 1 },
-    { label: "신청자", value: draft.name.trim(), step: 2 },
-    { label: "연락처", value: draft.phone, step: 2 },
-    { label: "봉사 경험", value: draft.experienced ? "있어요" : "처음이에요", step: 2 },
-    ...(draft.memo.trim() ? [{ label: "메모", value: draft.memo.trim(), step: 2 }] : []),
+  // 날짜·시간·전화번호는 줄 끝에서 갈라지지 않게 덩어리로
+  const rows: { label: string; value: ReactNode; step: number }[] = [
+    {
+      label: "일정",
+      value: (
+        <>
+          <span className="tnum">{formatDateKo(draft.date)}</span>{" "}
+          <span className="tnum">{formatTimeKo(draft.time)}</span>
+        </>
+      ),
+      step: 0,
+    },
+    {
+      label: "신청자",
+      value: (
+        <>
+          {draft.name.trim()} · <span className="tnum">{draft.phone}</span>
+        </>
+      ),
+      step: 1,
+    },
+    { label: "봉사 경험", value: draft.experienced ? "있어요" : "처음이에요", step: 1 },
+    ...(draft.memo.trim() ? [{ label: "남길 말", value: draft.memo.trim(), step: 1 }] : []),
   ];
   return (
-    <StepSection title="이대로 신청할까요?" desc="신청 후 보호소가 확인하면 방문예정으로 바뀌어요.">
+    <StepSection
+      title="이대로 신청할까요?"
+      desc="보호소가 확인하면 문자로 승인 안내를 드려요. 보통 하루 안이에요."
+    >
       <div className="card mt-5 overflow-hidden">
         <div className="flex items-center gap-4 border-b border-cream-200 p-5">
           <span className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl">
@@ -299,15 +363,16 @@ export function ReviewStep({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog; 
           </span>
           <div className="min-w-0">
             <p className="text-lg font-bold text-ink-900">{dog.name}</p>
-            <p className="truncate text-sm text-ink-500">
-              {shelter?.name} · {shelter?.address}
+            <p className="flex items-center gap-1 truncate text-sm text-ink-500">
+              <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {shelter?.name} · {shelter?.visit.meetingPoint.split(" — ")[0]}
             </p>
           </div>
         </div>
         <dl className="divide-y divide-cream-200 text-[15px]">
           {rows.map(({ label, value, step }) => (
             <div key={label} className="flex items-center gap-4 px-5 py-3">
-              <dt className="w-20 shrink-0 text-ink-400">{label}</dt>
+              <dt className="w-[72px] shrink-0 text-ink-500">{label}</dt>
               <dd className="min-w-0 flex-1 break-words font-medium tabular-nums text-ink-900">{value}</dd>
               <button
                 type="button"
@@ -320,7 +385,50 @@ export function ReviewStep({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog; 
             </div>
           ))}
         </dl>
+        <p className="border-t border-cream-200 bg-cream-100/60 px-5 py-3 text-sm text-ink-700">
+          방문 <strong className="font-semibold">{ARRIVE_EARLY_MIN}분 전</strong>까지 도착해 주세요 ·{" "}
+          {dog.walkNote.caution}
+        </p>
       </div>
+
+      <h3 className="mt-8 text-[15px] font-semibold text-ink-900">현장에서 꼭 지켜주세요</h3>
+      <ol className="mt-3 space-y-3">
+        {SAFETY_PROMISES.map((p, i) => (
+          <li key={p.title} className="flex gap-3">
+            <span className="tnum flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sage-100 text-[13px] font-bold text-sage-800">
+              {i + 1}
+            </span>
+            <span>
+              <span className="block text-[15px] font-semibold text-ink-900">{p.title}</span>
+              <span className="block text-sm leading-relaxed text-ink-500">{p.why}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+      <button
+        type="button"
+        onClick={() => update({ agreed: !draft.agreed })}
+        aria-pressed={draft.agreed}
+        className={cn(
+          "mt-5 flex min-h-[56px] w-full items-center gap-3 rounded-2xl border px-4 text-left transition-colors",
+          draft.agreed
+            ? "border-sage-600 bg-sage-50"
+            : showErrors
+              ? "border-red-400 bg-white"
+              : "border-cream-300 bg-white"
+        )}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors",
+            draft.agreed ? "border-sage-600 bg-sage-600 text-white" : "border-cream-300"
+          )}
+        >
+          {draft.agreed && <Check className="h-4 w-4" strokeWidth={3} />}
+        </span>
+        <span className="text-base font-semibold text-ink-900">세 가지를 지킬게요</span>
+      </button>
     </StepSection>
   );
 }
@@ -335,17 +443,16 @@ export function ApplySummary({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog
           <DogImage dog={dog} aspect="aspect-[4/3]" objectPosition="50% 34%" sizes="300px" />
         </div>
         <p className="mt-4 text-lg font-bold text-ink-900">{dog.name}</p>
-        <p className="mt-0.5 text-sm text-ink-500">
-          {shelter?.name} · {shelter?.region}
-        </p>
+        <p className="mt-0.5 text-sm text-ink-500">{dog.headline}</p>
         <dl className="mt-5 divide-y divide-cream-200 border-y border-cream-200 text-[15px]">
           {[
             { label: "날짜", value: draft.date ? formatDateKo(draft.date) : null },
             { label: "시간", value: draft.time ? formatTimeKo(draft.time) : null },
+            { label: "보호소", value: shelter?.name ?? null },
             { label: "추천 산책", value: dog.walkNote.recommendedDuration },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between gap-4 py-3">
-              <dt className="text-ink-400">{label}</dt>
+              <dt className="text-ink-500">{label}</dt>
               <dd className={cn("tabular-nums", value ? "font-semibold text-ink-900" : "text-ink-400")}>
                 {value ?? "선택 전"}
               </dd>

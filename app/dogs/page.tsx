@@ -11,10 +11,13 @@ import { shelters } from "@/lib/data/shelters";
 import {
   DIFFICULTIES,
   EMPTY_FILTERS,
+  NEEDS,
   REGIONS,
   SIZES,
   SORTS,
   TRAITS,
+  WHENS,
+  type NeedKey,
   activeFilterChips,
   parseDogQuery,
   searchDogs,
@@ -23,8 +26,12 @@ import {
   type SortKey,
 } from "@/lib/domain/dogSearch";
 import { DOGS_LIST_HREF_KEY, safeSession } from "@/lib/storageKeys";
+import { useClock } from "@/lib/useClock";
 import { cn } from "@/lib/utils";
 
+const toggleIn = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+/** 모바일 상단에서 바로 누르는 조건 — 시트를 열지 않아도 가장 많이 쓰는 것 */
+const QUICK_NEEDS: NeedKey[] = ["beginner", "gentle"];
 
 function Chip({
   active,
@@ -52,10 +59,35 @@ function Chip({
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function QuickChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "btn shrink-0 whitespace-nowrap border !px-4",
+        active ? "border-sage-600 bg-sage-600 text-white" : "border-cream-300 bg-white text-ink-700"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function FilterGroup({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <fieldset>
       <legend className="mb-2.5 text-[15px] font-semibold text-ink-900">{title}</legend>
+      {hint && <p className="-mt-1.5 mb-2.5 text-[13px] text-ink-500">{hint}</p>}
       {children}
     </fieldset>
   );
@@ -74,16 +106,42 @@ function FilterPanel({
 
   return (
     <div className="space-y-7">
-      <FilterGroup title="날짜">
-        <Chip active={filters.todayOnly} onClick={() => update((f) => ({ ...f, todayOnly: !f.todayOnly }))}>
-          오늘 산책 가능
-        </Chip>
+      <FilterGroup title="언제 걸을까요">
+        <div className="flex flex-wrap gap-2">
+          {WHENS.map((w) => (
+            <Chip
+              key={w.key}
+              active={filters.when === w.key}
+              onClick={() => update((f) => ({ ...f, when: toggle(f.when, w.key) }))}
+            >
+              {w.label}
+            </Chip>
+          ))}
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="나에게 맞는 조건" hint="고른 조건을 모두 만족하는 아이만 보여요">
+        <div className="flex flex-wrap gap-2">
+          {NEEDS.map((n) => (
+            <Chip
+              key={n.key}
+              active={filters.needs.includes(n.key)}
+              onClick={() => update((f) => ({ ...f, needs: toggleIn(f.needs, n.key) }))}
+            >
+              {n.label}
+            </Chip>
+          ))}
+        </div>
       </FilterGroup>
 
       <FilterGroup title="지역 · 보호소">
         <div className="flex flex-wrap gap-2">
           {REGIONS.map((r) => (
-            <Chip key={r} active={filters.region === r} onClick={() => update((f) => ({ ...f, region: toggle(f.region, r), shelterId: null }))}>
+            <Chip
+              key={r}
+              active={filters.region === r}
+              onClick={() => update((f) => ({ ...f, region: toggle(f.region, r), shelterId: null }))}
+            >
               {r}
             </Chip>
           ))}
@@ -112,7 +170,11 @@ function FilterPanel({
       <FilterGroup title="크기">
         <div className="flex flex-wrap gap-2">
           {SIZES.map((s) => (
-            <Chip key={s} active={filters.size === s} onClick={() => update((f) => ({ ...f, size: toggle(f.size, s) }))}>
+            <Chip
+              key={s}
+              active={filters.size === s}
+              onClick={() => update((f) => ({ ...f, size: toggle(f.size, s) }))}
+            >
               {s}견
             </Chip>
           ))}
@@ -122,25 +184,24 @@ function FilterPanel({
       <FilterGroup title="산책 난이도">
         <div className="flex flex-wrap gap-2">
           {DIFFICULTIES.map((d) => (
-            <Chip key={d} active={filters.difficulty === d} onClick={() => update((f) => ({ ...f, difficulty: toggle(f.difficulty, d) }))}>
+            <Chip
+              key={d}
+              active={filters.difficulty === d}
+              onClick={() => update((f) => ({ ...f, difficulty: toggle(f.difficulty, d) }))}
+            >
               {d}
             </Chip>
           ))}
         </div>
       </FilterGroup>
 
-      <FilterGroup title="성격">
+      <FilterGroup title="성격" hint="하나라도 해당하면 보여요">
         <div className="flex flex-wrap gap-2">
           {TRAITS.map((t) => (
             <Chip
               key={t}
               active={filters.traits.includes(t)}
-              onClick={() =>
-                update((f) => ({
-                  ...f,
-                  traits: f.traits.includes(t) ? f.traits.filter((x) => x !== t) : [...f.traits, t],
-                }))
-              }
+              onClick={() => update((f) => ({ ...f, traits: toggleIn(f.traits, t) }))}
             >
               {t}
             </Chip>
@@ -170,24 +231,29 @@ function DogsBrowser() {
     safeSession.set(DOGS_LIST_HREF_KEY, `/dogs${toDogQuery(filters, sort)}`);
   }, [filters, sort]);
 
-  const result = useMemo(() => searchDogs(dogs, filters, sort), [filters, sort]);
+  // 일정 조건·빠른 일정 순은 방문자의 지금 시각으로 계산합니다
+  const clock = useClock();
+  const needsClock = !!filters.when || sort === "soon";
+  const result = useMemo(() => searchDogs(dogs, filters, sort, clock ?? undefined), [filters, sort, clock]);
   const active = activeFilterChips(filters);
-  // 모바일 상단의 '오늘 가능' 빠른 토글과 별개로, 시트 안에서만 바꿀 수 있는 조건 수
-  const sheetCount = active.length - (filters.todayOnly ? 1 : 0);
+  const ready = !needsClock || !!clock;
 
   return (
     <div className="container-app py-8 md:py-10">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 lg:mb-6">
         <div>
           <h1 className="page-title">강아지 찾기</h1>
           <p className="mt-1.5 text-[15px] text-ink-500" aria-live="polite">
             {active.length > 0 ? "조건에 맞는 아이 " : "산책 친구를 기다리는 아이 "}
-            <strong className="tnum font-semibold text-ink-900">{result.length}마리</strong>
+            <strong className="tnum font-semibold text-ink-900">
+              {ready ? `${result.length}마리` : "–"}
+            </strong>
           </p>
         </div>
-        <label className="hidden items-center gap-2 text-[15px] text-ink-500 lg:flex">
-          정렬
+        <label className="flex items-center gap-2 text-[15px] text-ink-500">
+          <span className="hidden lg:inline">정렬</span>
           <select
+            aria-label="정렬"
             value={sort}
             onChange={(e) => commit(filters, e.target.value as SortKey)}
             className="min-h-[44px] rounded-full border border-cream-300 bg-white px-4 text-[15px] font-medium text-ink-900 focus:border-sage-400 focus:outline-none"
@@ -201,8 +267,8 @@ function DogsBrowser() {
         </label>
       </header>
 
-      {/* 모바일 · 태블릿 */}
-      <div className="mb-5 flex items-center gap-2 lg:hidden">
+      {/* 모바일 · 태블릿 — 필터 시트 + 자주 쓰는 조건은 바로 */}
+      <div className="no-scrollbar -mx-4 mb-5 flex items-center gap-2 overflow-x-auto px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
@@ -210,38 +276,30 @@ function DogsBrowser() {
         >
           <SlidersHorizontal className="h-4 w-4" />
           필터
-          {sheetCount > 0 && (
+          {active.length > 0 && (
             <span className="tnum flex h-5 min-w-5 items-center justify-center rounded-full bg-ink-900 px-1 text-xs font-bold text-white">
-              {sheetCount}
+              {active.length}
             </span>
           )}
         </button>
-        <button
-          type="button"
-          aria-pressed={filters.todayOnly}
-          onClick={() => update((f) => ({ ...f, todayOnly: !f.todayOnly }))}
-          className={cn(
-            "btn shrink-0 whitespace-nowrap border !px-4",
-            filters.todayOnly
-              ? "border-sage-600 bg-sage-600 text-white"
-              : "border-cream-300 bg-white text-ink-700"
-          )}
-        >
-          오늘 가능
-        </button>
-        <span className="flex-1" />
-        <select
-          value={sort}
-          onChange={(e) => commit(filters, e.target.value as SortKey)}
-          aria-label="정렬"
-          className="min-h-[44px] min-w-0 rounded-full border border-cream-300 bg-white px-3 text-[15px] font-medium text-ink-700 focus:border-sage-400 focus:outline-none"
-        >
-          {SORTS.map((s) => (
-            <option key={s.key} value={s.key}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+        {WHENS.map((w) => (
+          <QuickChip
+            key={w.key}
+            active={filters.when === w.key}
+            onClick={() => update((f) => ({ ...f, when: f.when === w.key ? null : w.key }))}
+          >
+            {w.label}
+          </QuickChip>
+        ))}
+        {QUICK_NEEDS.map((k) => (
+          <QuickChip
+            key={k}
+            active={filters.needs.includes(k)}
+            onClick={() => update((f) => ({ ...f, needs: toggleIn(f.needs, k) }))}
+          >
+            {NEEDS.find((n) => n.key === k)!.label}
+          </QuickChip>
+        ))}
       </div>
 
       <div className="flex gap-10">
@@ -277,18 +335,26 @@ function DogsBrowser() {
           )}
 
           <h2 className="sr-only">검색 결과</h2>
-          {result.length === 0 ? (
+          {!ready ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-40 animate-pulse rounded-[20px] bg-cream-200/70 sm:h-80" />
+              ))}
+            </div>
+          ) : result.length === 0 ? (
             <EmptyState
               message={"조건에 맞는 아이를 찾지 못했어요.\n조건을 조금만 넓혀볼까요?"}
               ctaLabel="필터 모두 해제"
               onAction={() => commit(EMPTY_FILTERS, sort)}
             />
           ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-10 xl:grid-cols-3">
               {result.map((dog, i) => (
-                <DogCard key={dog.id} dog={dog} priority={i < 2} />
+                <li key={dog.id}>
+                  <DogCard dog={dog} priority={i < 2} rowOnMobile />
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
       </div>
@@ -299,7 +365,11 @@ function DogsBrowser() {
         title="필터"
         footer={
           <>
-            <button type="button" onClick={() => commit(EMPTY_FILTERS, sort)} className="btn-secondary flex-1">
+            <button
+              type="button"
+              onClick={() => commit(EMPTY_FILTERS, sort)}
+              className="btn-secondary flex-1"
+            >
               모두 해제
             </button>
             <button type="button" onClick={() => setSheetOpen(false)} className="btn-primary flex-[2]">

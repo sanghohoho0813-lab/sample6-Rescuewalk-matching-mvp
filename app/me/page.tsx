@@ -7,10 +7,11 @@ import DogCard from "@/components/DogCard";
 import DogRail from "@/components/DogRail";
 import Dialog from "@/components/Dialog";
 import EmptyState from "@/components/EmptyState";
-import { dogs } from "@/lib/data/dogs";
+import { dogs, getDog } from "@/lib/data/dogs";
 import { useStore } from "@/lib/store";
 import { isOpen } from "@/lib/domain/requests";
-import { cn, computeStats } from "@/lib/utils";
+import { computeImpact } from "@/lib/domain/impact";
+import { cn, todayISO } from "@/lib/utils";
 
 const REGIONS = ["서울", "인천", "경기", "대전", "부산"];
 
@@ -27,7 +28,8 @@ export default function MyPage() {
   } = useStore();
   const [resetOpen, setResetOpen] = useState(false);
 
-  const stats = computeStats(activityLogs);
+  // 이번 달 수치는 쓰지 않으므로 기준일은 렌더 시점이어도 괜찮습니다
+  const stats = computeImpact(activityLogs, (id) => getDog(id)?.shelterId, todayISO());
   const favoriteDogs = dogs.filter((d) => favorites.includes(d.id));
   const upcoming = requests.filter(isOpen).length;
 
@@ -63,7 +65,11 @@ export default function MyPage() {
           { href: "/activity", label: "활동 기록", value: `${stats.totalWalks}회` },
           { href: "#favorites", label: "찜한 아이", value: `${favorites.length}마리` },
         ].map((s) => (
-          <Link key={s.label} href={s.href} className="flex flex-col items-center px-2 py-1 hover:text-sage-700">
+          <Link
+            key={s.label}
+            href={s.href}
+            className="flex flex-col items-center px-2 py-1 hover:text-sage-700"
+          >
             <span className="tnum text-xl font-bold text-ink-900">{hydrated ? s.value : "–"}</span>
             <span className="mt-0.5 text-[13px] text-ink-400">{s.label}</span>
           </Link>
@@ -88,7 +94,11 @@ export default function MyPage() {
               ))}
             </div>
           ) : favoriteDogs.length === 0 ? (
-            <EmptyState message={"마음에 드는 아이를 저장해보세요."} ctaLabel="아이들 둘러보기" ctaHref="/dogs" />
+            <EmptyState
+              message={"마음에 드는 아이를 저장해보세요."}
+              ctaLabel="아이들 둘러보기"
+              ctaHref="/dogs"
+            />
           ) : (
             <DogRail label="찜한 아이들">
               {favoriteDogs.map((dog) => (

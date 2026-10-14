@@ -1,4 +1,4 @@
-import type { ActivityStats, Badge, WalkRequestStatus } from "@/lib/types";
+import type { WalkRequestStatus } from "@/lib/types";
 
 export function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
@@ -58,9 +58,10 @@ export function todayISO(): string {
 }
 
 export function toISODate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(
+    2,
+    "0"
+  )}`;
 }
 
 /** 오늘 기준 n일 뒤(음수면 이전)의 ISO 날짜 */
@@ -125,65 +126,3 @@ export const STATUS_STYLE: Record<WalkRequestStatus, string> = {
   completed: "bg-sage-600 text-white",
   cancelled: "bg-ink-300/20 text-ink-500",
 };
-
-export const BADGES: Badge[] = [
-  {
-    id: "first-walk",
-    label: "첫 산책",
-    description: "처음으로 아이와 함께 걸었어요",
-    icon: "🐾",
-    achieved: (s) => s.totalWalks >= 1,
-    progress: (s) => `${Math.min(s.totalWalks, 1)}/1회`,
-  },
-  {
-    id: "three-walks",
-    label: "3회 참여",
-    description: "산책 봉사 3회를 달성했어요",
-    icon: "🌱",
-    achieved: (s) => s.totalWalks >= 3,
-    progress: (s) => `${Math.min(s.totalWalks, 3)}/3회`,
-  },
-  {
-    id: "weekend-walker",
-    label: "주말 산책러",
-    description: "주말에 산책 봉사에 참여했어요",
-    icon: "☀️",
-    achieved: (s) => s.weekendWalks >= 1,
-    progress: () => "주말 산책 1회",
-  },
-  {
-    id: "five-friends",
-    label: "5마리 친구",
-    description: "다섯 아이와 인연을 맺었어요",
-    icon: "💛",
-    achieved: (s) => s.uniqueDogs >= 5,
-    progress: (s) => `${Math.min(s.uniqueDogs, 5)}/5마리`,
-  },
-  {
-    id: "ten-hours",
-    label: "누적 10시간",
-    description: "함께 걸은 시간이 10시간을 넘었어요",
-    icon: "⏰",
-    achieved: (s) => s.totalMinutes >= 600,
-    progress: (s) => `${Math.floor(Math.min(s.totalMinutes, 600) / 60)}/10시간`,
-  },
-  {
-    id: "ten-walks",
-    label: "10회 참여",
-    description: "산책 봉사 10회를 달성했어요",
-    icon: "🏅",
-    achieved: (s) => s.totalWalks >= 10,
-    progress: (s) => `${Math.min(s.totalWalks, 10)}/10회`,
-  },
-];
-
-export function computeStats(
-  logs: { date: string; durationMin: number; dogId: string }[]
-): ActivityStats {
-  return {
-    totalWalks: logs.length,
-    uniqueDogs: new Set(logs.map((l) => l.dogId)).size,
-    totalMinutes: logs.reduce((sum, l) => sum + l.durationMin, 0),
-    weekendWalks: logs.filter((l) => isWeekend(l.date)).length,
-  };
-}

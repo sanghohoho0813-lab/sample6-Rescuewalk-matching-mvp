@@ -78,9 +78,7 @@ export default function SampleBridgeCTA({
                 <span className="absolute inset-0 animate-soft-pulse rounded-full bg-mirae-300 motion-reduce:animate-none" />
                 <span className="relative h-1.5 w-1.5 rounded-full bg-mirae-300" />
               </span>
-              <span className="text-xs font-bold tracking-[0.16em] text-mirae-100">
-                {eyebrow}
-              </span>
+              <span className="text-xs font-bold tracking-[0.16em] text-mirae-100">{eyebrow}</span>
             </span>
 
             <p className="mt-5 flex items-center gap-2 text-sm font-semibold text-mirae-200">
@@ -130,9 +128,7 @@ export default function SampleBridgeCTA({
                 />
               </a>
 
-              <p className="mt-3 text-center text-[13px] leading-relaxed text-white/60">
-                {note}
-              </p>
+              <p className="mt-3 text-center text-[13px] leading-relaxed text-white/60">{note}</p>
 
               <div className="my-5 h-px bg-white/10" />
 

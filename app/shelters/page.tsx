@@ -9,7 +9,8 @@ export default function SheltersPage() {
       <header className="mb-8">
         <h1 className="page-title">보호소</h1>
         <p className="mt-1.5 text-[15px] text-ink-500">
-          RescueWalk와 함께하는 보호소 <strong className="tnum font-semibold text-ink-900">{shelters.length}곳</strong>
+          RescueWalk와 함께하는 보호소{" "}
+          <strong className="tnum font-semibold text-ink-900">{shelters.length}곳</strong>
         </p>
       </header>
       <h2 className="sr-only">보호소 목록</h2>

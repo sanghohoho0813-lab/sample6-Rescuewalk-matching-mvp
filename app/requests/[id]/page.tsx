@@ -3,90 +3,43 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  CalendarDays,
-  Check,
-  Clock,
-  Loader2,
-  MapPin,
-  PawPrint,
-} from "lucide-react";
+import { ArrowLeft, Check, Clock, Loader2, MessageSquareText, PawPrint } from "lucide-react";
 import Dialog from "@/components/Dialog";
 import EmptyState from "@/components/EmptyState";
 import StatusBadge from "@/components/StatusBadge";
+import VisitInfo from "@/components/VisitInfo";
+import VisitStages from "@/components/VisitStages";
 import DogImage, { DogFace } from "@/components/DogImage";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
+import { OBSERVATIONS } from "@/lib/domain/impact";
+import { canCancel, currentStageIndex } from "@/lib/domain/requests";
 import { useStore } from "@/lib/store";
-import { canCancel } from "@/lib/domain/requests";
-import { cn, formatDateFullKo, formatDateKo, formatTimeKo, relativeDayLabel, todayISO, withJosa } from "@/lib/utils";
-import type { WalkRequest } from "@/lib/types";
+import { useClock } from "@/lib/useClock";
+import { ARRIVE_EARLY_MIN, COMMON_BRING, CONTACT_FLOW, PROVIDED } from "@/lib/visitGuide";
+import { cn, formatDateFullKo, formatDateKo, formatTimeKo, relativeDayLabel, withJosa } from "@/lib/utils";
 
 const DURATIONS = [20, 30, 40, 60, 90];
 
-function formatStamp(iso?: string): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
-}
-
-function Timeline({ req }: { req: WalkRequest }) {
-  const cancelled = req.status === "cancelled";
-  const steps = [
-    { label: "신청", at: req.createdAt, done: true },
-    { label: "보호소 확인", at: req.confirmedAt, done: !!req.confirmedAt },
-    { label: "산책·기록", at: req.completedAt, done: !!req.completedAt },
-  ];
+function DemoNote({ children }: { children: React.ReactNode }) {
   return (
-    <ol className="grid grid-cols-3" aria-label="진행 상황">
-      {steps.map((s, i) => {
-        const current = !cancelled && !s.done && (i === 0 || steps[i - 1].done);
-        return (
-          <li key={s.label} className="relative flex flex-col items-center text-center">
-            {i > 0 && (
-              <span
-                aria-hidden
-                className={cn(
-                  "absolute right-1/2 top-3 h-0.5 w-full -translate-y-1/2",
-                  s.done ? "bg-sage-400" : "bg-cream-300"
-                )}
-              />
-            )}
-            <span
-              className={cn(
-                "relative flex h-6 w-6 items-center justify-center rounded-full border-2",
-                s.done && "border-sage-500 bg-sage-500 text-white",
-                current && "border-tangerine-400 bg-white",
-                !s.done && !current && "border-cream-300 bg-white"
-              )}
-            >
-              {s.done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-              {current && <span className="h-2 w-2 rounded-full bg-tangerine-400" />}
-            </span>
-            <span
-              className={cn(
-                "mt-2 text-[13px] font-semibold",
-                s.done ? "text-ink-900" : current ? "text-tangerine-700" : "text-ink-400"
-              )}
-            >
-              {s.label}
-            </span>
-            <span className="tnum mt-0.5 text-[13px] text-ink-400">
-              {formatStamp(s.at) ?? (current ? "진행 중" : "–")}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
+    <p className="mt-3 text-[13px] leading-relaxed text-ink-500">
+      <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-[13px] font-semibold text-ink-500 ring-1 ring-cream-300">
+        데모
+      </span>
+      {children}
+    </p>
   );
 }
 
+/**
+ * 신청 상세 — "언제, 어디로, 무엇을 들고 가면 되는지"가 한눈에.
+ * 지금 단계(접수·승인·방문 예정·산책·완료)에 맞는 안내와 행동 하나를 맨 위에 둡니다.
+ */
 export default function RequestDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const clock = useClock();
   const { requests, activityLogs, hydrated, cancelRequest, confirmRequest, completeWalk, showToast } =
     useStore();
 
@@ -94,9 +47,10 @@ export default function RequestDetailPage() {
   const [logOpen, setLogOpen] = useState(false);
   const [duration, setDuration] = useState(40);
   const [note, setNote] = useState("");
+  const [observations, setObservations] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
-  if (!hydrated) {
+  if (!hydrated || !clock) {
     return (
       <div className="container-app max-w-3xl py-8" aria-busy="true">
         <div className="h-5 w-24 animate-pulse rounded-full bg-cream-200" />
@@ -129,9 +83,9 @@ export default function RequestDetailPage() {
 
   const shelter = getShelter(dog.shelterId);
   const log = activityLogs.find((l) => l.requestId === req.id);
-  const today = todayISO();
-  const isPast = req.date < today;
+  const stage = currentStageIndex(req, clock.now);
   const cancellable = canCancel(req);
+  const isOpen = req.status === "pending" || req.status === "confirmed";
 
   const doCancel = () => {
     cancelRequest(req.id);
@@ -148,7 +102,7 @@ export default function RequestDetailPage() {
     if (busy) return;
     setBusy(true);
     setTimeout(() => {
-      const logId = completeWalk(req.id, { durationMin: duration, note });
+      const logId = completeWalk(req.id, { durationMin: duration, note, observations });
       if (!logId) {
         setBusy(false);
         showToast("기록할 수 없는 상태예요. 새로고침 후 다시 시도해주세요.");
@@ -158,23 +112,27 @@ export default function RequestDetailPage() {
     }, 500);
   };
 
-  // 상태별 안내와 단 하나의 주요 행동
-  const callout = (() => {
+  // 지금 단계의 안내와 단 하나의 주요 행동
+  const now = (() => {
     switch (req.status) {
       case "pending":
         return {
           tone: "bg-tangerine-50 border-tangerine-100",
           title: "보호소가 신청을 확인하고 있어요",
-          body: "보통 하루 안에 확정 연락을 드려요. 확정되면 방문예정으로 바뀌어요.",
+          body: "보통 하루 안에 문자로 승인 안내를 드려요. 승인되면 방문 예정으로 바뀌어요.",
         };
       case "confirmed":
-        return {
-          tone: "bg-sage-50 border-sage-100",
-          title: isPast
-            ? "방문일이 지났어요. 산책을 마쳤다면 기록을 남겨주세요"
-            : `${relativeDayLabel(req.date, today)}, ${withJosa(dog.name, "를")} 만나러 가요`,
-          body: `${formatDateKo(req.date)} ${formatTimeKo(req.time)} · ${shelter?.name}. 10분 전까지 도착해주세요.`,
-        };
+        return stage === 3
+          ? {
+              tone: "bg-sage-50 border-sage-100",
+              title: `${withJosa(dog.name, "와")}의 산책은 어땠나요?`,
+              body: "걸은 시간과 아이 모습을 남겨주세요. 보호소가 아이 기록에 반영해요.",
+            }
+          : {
+              tone: "bg-sage-50 border-sage-100",
+              title: `${relativeDayLabel(req.date, clock.today)}, ${withJosa(dog.name, "를")} 만나러 가요`,
+              body: `${formatDateKo(req.date)} ${formatTimeKo(req.time)} · ${ARRIVE_EARLY_MIN}분 전까지 와주세요. 만나는 곳은 아래 방문 정보에 있어요.`,
+            };
       case "completed":
         return {
           tone: "bg-sage-50 border-sage-100",
@@ -192,30 +150,28 @@ export default function RequestDetailPage() {
     }
   })();
 
+  const reapply =
+    dog.availability === "unavailable" ? (
+      <Link href="/dogs" className="btn-primary btn-lg w-full">
+        다른 아이 둘러보기
+      </Link>
+    ) : (
+      <Link href={`/dogs/${dog.id}/apply`} className="btn-primary btn-lg w-full">
+        {withJosa(dog.name, "와")} 다시 산책하기
+      </Link>
+    );
+
   const primary = (() => {
     switch (req.status) {
       case "confirmed":
         return (
           <button type="button" onClick={() => setLogOpen(true)} className="btn-primary btn-lg w-full">
-            <PawPrint className="h-4 w-4" /> 산책 완료 기록하기
+            <PawPrint className="h-4 w-4" aria-hidden /> 산책 완료 기록하기
           </button>
         );
       case "completed":
-        return (
-          <Link href="/activity" className="btn-primary btn-lg w-full">
-            활동 기록 보기
-          </Link>
-        );
       case "cancelled":
-        return dog.availability === "unavailable" ? (
-          <Link href="/dogs" className="btn-primary btn-lg w-full">
-            다른 아이 둘러보기
-          </Link>
-        ) : (
-          <Link href={`/dogs/${dog.id}/apply`} className="btn-primary btn-lg w-full">
-            {withJosa(dog.name, "와")} 다시 신청하기
-          </Link>
-        );
+        return reapply;
       default:
         return null;
     }
@@ -227,7 +183,7 @@ export default function RequestDetailPage() {
         href="/requests"
         className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-full px-2 text-sm font-medium text-ink-500 hover:text-ink-900"
       >
-        <ArrowLeft className="h-4 w-4" /> 신청 내역
+        <ArrowLeft className="h-4 w-4" aria-hidden /> 신청 내역
       </Link>
 
       <div className="mt-2 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
@@ -247,104 +203,124 @@ export default function RequestDetailPage() {
                 <StatusBadge status={req.status} />
               </div>
               <p className="mt-0.5 truncate text-[15px] text-ink-500">
-                {dog.breed} · {shelter?.name}
+                {shelter?.name} · 예약번호 <span className="tnum font-mono text-sm">{req.reservationNo}</span>
               </p>
             </div>
           </div>
 
-          {/* 지금 상태 + 할 일 */}
-          <div className={cn("mt-6 rounded-[20px] border p-5", callout.tone)}>
-            <p className="text-[17px] font-bold leading-snug text-ink-900">{callout.title}</p>
-            <p className="mt-1.5 text-[15px] leading-relaxed text-ink-700">{callout.body}</p>
-
-            {req.status === "pending" && (
-              <div className="mt-4 border-t border-tangerine-100 pt-4">
-                <p className="text-[13px] leading-relaxed text-ink-500">
-                  <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-[13px] font-semibold text-ink-500">
-                    데모
-                  </span>
-                  실제 서비스에서는 보호소가 승인해요. 시연에서는 직접 승인해볼 수 있어요.
-                </p>
-                <button type="button" onClick={doConfirm} className="btn-secondary mt-3 w-full sm:w-auto">
-                  <Check className="h-4 w-4" /> 보호소 승인 처리하기
-                </button>
-              </div>
-            )}
-            {req.status === "confirmed" && !isPast && (
-              <p className="mt-3 text-[13px] text-ink-500">
-                <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-[13px] font-semibold text-ink-500">
-                  데모
-                </span>
-                시연에서는 방문일 전에도 산책 완료를 기록할 수 있어요.
-              </p>
-            )}
-            {primary && <div className="mt-4 lg:hidden">{primary}</div>}
-          </div>
-
-          <div className="mt-8">
-            <Timeline req={req} />
-          </div>
-
-          {/* 방문 정보 */}
-          <section className="mt-10">
-            <h2 className="text-base font-bold text-ink-900">방문 정보</h2>
-            <dl className="mt-3 divide-y divide-cream-200 border-y border-cream-200 text-[15px]">
-              <div className="flex gap-4 py-3.5">
-                <dt className="w-20 shrink-0 text-ink-400">방문일</dt>
-                <dd className="flex items-center gap-1.5 font-medium text-ink-900">
-                  <CalendarDays className="h-4 w-4 text-sage-500" aria-hidden />
-                  <span className="tnum">{formatDateFullKo(req.date)}</span>
-                </dd>
-              </div>
-              <div className="flex gap-4 py-3.5">
-                <dt className="w-20 shrink-0 text-ink-400">시간</dt>
-                <dd className="flex items-center gap-1.5 font-medium text-ink-900">
-                  <Clock className="h-4 w-4 text-sage-500" aria-hidden />
-                  <span className="tnum">{formatTimeKo(req.time)}</span>
-                </dd>
-              </div>
-              <div className="flex gap-4 py-3.5">
-                <dt className="w-20 shrink-0 text-ink-400">장소</dt>
-                <dd className="min-w-0 text-ink-900">
-                  <Link href={`/shelters/${shelter?.id}`} className="font-medium hover:underline">
-                    {shelter?.name}
-                  </Link>
-                  <p className="mt-0.5 flex items-start gap-1 text-sm text-ink-500">
-                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                    {shelter?.address}
-                  </p>
-                  <p className="mt-0.5 text-sm text-ink-500">{shelter?.hours}</p>
-                </dd>
-              </div>
-              <div className="flex gap-4 py-3.5">
-                <dt className="w-20 shrink-0 text-ink-400">예약번호</dt>
-                <dd className="tnum font-mono text-sm text-ink-700">{req.reservationNo}</dd>
-              </div>
-            </dl>
+          {/* 진행 단계 + 지금 할 일 */}
+          <section aria-label="진행 상황" className={cn("mt-6 rounded-[20px] border p-5", now.tone)}>
+            <VisitStages req={req} />
+            <div className="mt-5 border-t border-black/5 pt-4">
+              <p className="text-[17px] font-bold leading-snug text-ink-900">{now.title}</p>
+              <p className="mt-1.5 text-[15px] leading-relaxed text-ink-700">{now.body}</p>
+              {req.status === "completed" && log?.observations && log.observations.length > 0 && (
+                <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="남긴 관찰">
+                  {log.observations.map((o) => (
+                    <li key={o} className="chip bg-white text-ink-700 ring-1 ring-sage-100">
+                      {o}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {req.status === "pending" && (
+                <>
+                  <DemoNote>
+                    실제 서비스에서는 보호소가 승인해요. 시연에서는 직접 승인해볼 수 있어요.
+                  </DemoNote>
+                  <button type="button" onClick={doConfirm} className="btn-secondary mt-3 w-full sm:w-auto">
+                    <Check className="h-4 w-4" aria-hidden /> 보호소 승인 처리하기
+                  </button>
+                </>
+              )}
+              {req.status === "confirmed" && stage === 2 && (
+                <DemoNote>시연에서는 방문일 전에도 산책 완료를 기록할 수 있어요.</DemoNote>
+              )}
+              {primary && <div className="mt-4 lg:hidden">{primary}</div>}
+            </div>
           </section>
 
+          {/* 방문 정보 — 열려 있는 신청에서 가장 중요한 정보 */}
+          <section className="mt-10">
+            <h2 className="text-base font-bold text-ink-900">방문 정보</h2>
+            <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-cream-300">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sage-50 text-sage-700">
+                <Clock className="h-5 w-5" aria-hidden />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[17px] font-bold text-ink-900">
+                  <span className="tnum">{formatDateFullKo(req.date)}</span>{" "}
+                  <span className="tnum">{formatTimeKo(req.time)}</span>
+                </span>
+                <span className="block text-sm text-ink-500">
+                  {isOpen
+                    ? `${ARRIVE_EARLY_MIN}분 전 도착 · 산책 ${dog.walkNote.recommendedDuration}`
+                    : `산책 ${dog.walkNote.recommendedDuration}`}
+                </span>
+              </span>
+            </div>
+            {shelter && (
+              <VisitInfo
+                shelter={shelter}
+                className="mt-3"
+                fields={
+                  isOpen ? ["meetingPoint", "address", "transit", "parking", "phone"] : ["address", "phone"]
+                }
+              />
+            )}
+          </section>
+
+          {isOpen && (
+            <>
+              <section className="mt-10">
+                <h2 className="text-base font-bold text-ink-900">챙겨 오세요</h2>
+                <ul className="mt-3 space-y-2">
+                  {[...COMMON_BRING, ...(dog.bring ?? [])].map((b) => (
+                    <li key={b} className="flex items-center gap-2.5 text-[15px] text-ink-900">
+                      <Check className="h-4 w-4 shrink-0 text-sage-600" strokeWidth={3} aria-hidden />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2.5 text-sm text-ink-500">{PROVIDED}</p>
+                <p className="mt-2 rounded-xl bg-tangerine-50 px-3.5 py-2.5 text-sm text-ink-900">
+                  <strong className="font-semibold">{dog.name}</strong> · {dog.walkNote.caution}
+                </p>
+              </section>
+
+              <section className="mt-10">
+                <h2 className="flex items-center gap-1.5 text-base font-bold text-ink-900">
+                  <MessageSquareText className="h-4 w-4 text-sage-600" aria-hidden /> 연락은 이렇게 와요
+                </h2>
+                <ol className="mt-3 space-y-2">
+                  {CONTACT_FLOW.map((c, i) => (
+                    <li key={c} className="flex gap-2.5 text-[15px] leading-relaxed text-ink-700">
+                      <span className="tnum mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cream-200 text-xs font-bold text-ink-700">
+                        {i + 1}
+                      </span>
+                      {c}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            </>
+          )}
+
           {/* 신청자 정보 */}
-          <section className="mt-8">
+          <section className="mt-10">
             <h2 className="text-base font-bold text-ink-900">신청자 정보</h2>
             <dl className="mt-3 divide-y divide-cream-200 border-y border-cream-200 text-[15px]">
-              <div className="flex gap-4 py-3.5">
-                <dt className="w-20 shrink-0 text-ink-400">이름</dt>
-                <dd className="text-ink-900">{req.applicant.name}</dd>
-              </div>
-              <div className="flex gap-4 py-3.5">
-                <dt className="w-20 shrink-0 text-ink-400">연락처</dt>
-                <dd className="tnum text-ink-900">{req.applicant.phone}</dd>
-              </div>
-              <div className="flex gap-4 py-3.5">
-                <dt className="w-20 shrink-0 text-ink-400">봉사 경험</dt>
-                <dd className="text-ink-900">{req.applicant.experienced ? "있어요" : "처음이에요"}</dd>
-              </div>
-              {req.applicant.memo && (
-                <div className="flex gap-4 py-3.5">
-                  <dt className="w-20 shrink-0 text-ink-400">메모</dt>
-                  <dd className="text-ink-900">{req.applicant.memo}</dd>
+              {[
+                { label: "이름", value: req.applicant.name },
+                { label: "연락처", value: <span className="tnum">{req.applicant.phone}</span> },
+                { label: "봉사 경험", value: req.applicant.experienced ? "있어요" : "처음이에요" },
+                ...(req.applicant.memo ? [{ label: "남긴 말", value: req.applicant.memo }] : []),
+              ].map((row) => (
+                <div key={row.label} className="flex gap-4 py-3">
+                  <dt className="w-20 shrink-0 text-ink-500">{row.label}</dt>
+                  <dd className="text-ink-900">{row.value}</dd>
                 </div>
-              )}
+              ))}
             </dl>
           </section>
 
@@ -353,7 +329,7 @@ export default function RequestDetailPage() {
               <button
                 type="button"
                 onClick={() => setCancelOpen(true)}
-                className="inline-flex min-h-[44px] items-center text-sm font-medium text-ink-400 underline-offset-4 hover:text-red-600 hover:underline"
+                className="inline-flex min-h-[44px] items-center text-sm font-medium text-ink-500 underline-offset-4 hover:text-red-700 hover:underline"
               >
                 신청 취소하기
               </button>
@@ -370,10 +346,11 @@ export default function RequestDetailPage() {
                 {formatDateKo(req.date)} · {formatTimeKo(req.time)}
               </p>
               <p className="mt-1 text-lg font-bold text-ink-900">{withJosa(dog.name, "와")}의 산책</p>
-              {primary && <div className="mt-4">{primary}</div>}
-              {!primary && (
+              {primary ? (
+                <div className="mt-4">{primary}</div>
+              ) : (
                 <p className="mt-3 text-sm leading-relaxed text-ink-500">
-                  보호소 확인이 끝나면 여기에서 산책을 기록할 수 있어요.
+                  보호소가 승인하면 여기에서 산책을 기록할 수 있어요.
                 </p>
               )}
             </div>
@@ -403,7 +380,7 @@ export default function RequestDetailPage() {
         onClose={() => setLogOpen(false)}
         busy={busy}
         title={`${withJosa(dog.name, "와")}의 산책을 기록해요`}
-        description="기록은 활동 기록과 배지에 바로 반영돼요."
+        description="남긴 기록은 활동 기록과 보호소의 아이 기록에 함께 반영돼요."
         footer={
           <>
             <button
@@ -417,7 +394,7 @@ export default function RequestDetailPage() {
             <button type="button" onClick={doLog} disabled={busy} className="btn-primary flex-[2]">
               {busy ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> 저장하고 있어요
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> 저장하고 있어요
                 </>
               ) : (
                 "기록 완료"
@@ -447,9 +424,36 @@ export default function RequestDetailPage() {
             ))}
           </div>
         </fieldset>
+        <fieldset className="mt-5">
+          <legend className="text-sm font-semibold text-ink-700">
+            {withJosa(dog.name, "는")} 어땠나요?{" "}
+            <span className="font-normal text-ink-500">선택 · 여러 개</span>
+          </legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {OBSERVATIONS.map((o) => {
+              const on = observations.includes(o);
+              return (
+                <button
+                  key={o}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setObservations((prev) => (on ? prev.filter((x) => x !== o) : [...prev, o]))}
+                  className={cn(
+                    "min-h-[40px] rounded-full border px-3.5 text-sm transition-colors",
+                    on
+                      ? "border-sage-600 bg-sage-600 font-semibold text-white"
+                      : "border-cream-300 bg-white text-ink-700"
+                  )}
+                >
+                  {o}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
         <label className="mt-5 block">
           <span className="flex items-baseline justify-between text-sm font-semibold text-ink-700">
-            오늘의 한 줄 <span className="font-normal text-ink-400">선택 · {note.length}/120</span>
+            오늘의 한 줄 <span className="font-normal text-ink-500">선택 · {note.length}/120</span>
           </span>
           <textarea
             value={note}

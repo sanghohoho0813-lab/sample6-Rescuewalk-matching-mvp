@@ -22,7 +22,6 @@ const FILTERS: { key: WalkRequestStatus | "all"; label: string }[] = [
   { key: "cancelled", label: "취소" },
 ];
 
-
 function RequestRow({ req, today }: { req: WalkRequest; today: string }) {
   const dog = getDog(req.dogId);
   if (!dog) return null;

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  BADGES,
-  computeStats,
   daysFromToday,
   diffDays,
   formatDateKo,
@@ -64,26 +62,5 @@ describe("날짜·시간 표기", () => {
     expect(isWeekend("2026-10-10")).toBe(true);
     expect(isWeekend("2026-10-11")).toBe(true);
     expect(isWeekend("2026-10-12")).toBe(false);
-  });
-});
-
-describe("활동 통계와 배지", () => {
-  const logs = [
-    { date: "2026-10-03", durationMin: 60, dogId: "a" },
-    { date: "2026-10-05", durationMin: 40, dogId: "b" },
-    { date: "2026-10-06", durationMin: 30, dogId: "a" },
-  ];
-
-  it("횟수·아이 수·시간·주말 산책", () => {
-    expect(computeStats(logs)).toEqual({ totalWalks: 3, uniqueDogs: 2, totalMinutes: 130, weekendWalks: 1 });
-  });
-
-  it("달성 여부와 진행도", () => {
-    const stats = computeStats(logs);
-    const byId = Object.fromEntries(BADGES.map((b) => [b.id, b]));
-    expect(byId["three-walks"].achieved(stats)).toBe(true);
-    expect(byId["five-friends"].achieved(stats)).toBe(false);
-    expect(byId["five-friends"].progress(stats)).toBe("2/5마리");
-    expect(byId["ten-hours"].progress(stats)).toBe("2/10시간");
   });
 });

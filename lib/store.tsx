@@ -48,7 +48,10 @@ interface StoreState extends PersistedState {
   /** 데모: 보호소가 신청을 승인한 것처럼 처리 */
   confirmRequest: (requestId: string) => void;
   /** 산책 완료를 기록하고 새 활동 기록의 id 를 돌려줍니다 */
-  completeWalk: (requestId: string, input: { durationMin: number; note: string }) => string | null;
+  completeWalk: (
+    requestId: string,
+    input: { durationMin: number; note: string; observations?: string[] }
+  ) => string | null;
   toggleInterestRegion: (region: string) => void;
   resetDemo: () => void;
   showToast: (message: string) => void;
@@ -177,23 +180,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [updateRequest]
   );
 
-  const completeWalk = useCallback((requestId: string, input: { durationMin: number; note: string }) => {
-    const req = stateRef.current.requests.find((r) => r.id === requestId);
-    const result =
-      req && Requests.complete(req, input, { now: new Date(), today: todayISO(), logId: newId("act") });
-    if (!result) return null;
-    // 같은 렌더 안에서 두 번 눌러도 기록이 두 개 생기지 않게 ref 도 바로 갱신
-    stateRef.current = {
-      ...stateRef.current,
-      requests: stateRef.current.requests.map((r) => (r.id === requestId ? result.request : r)),
-    };
-    setState((s) => ({
-      ...s,
-      requests: s.requests.map((r) => (r.id === requestId ? result.request : r)),
-      activityLogs: [result.log, ...s.activityLogs],
-    }));
-    return result.log.id;
-  }, []);
+  const completeWalk = useCallback(
+    (requestId: string, input: { durationMin: number; note: string; observations?: string[] }) => {
+      const req = stateRef.current.requests.find((r) => r.id === requestId);
+      const result =
+        req && Requests.complete(req, input, { now: new Date(), today: todayISO(), logId: newId("act") });
+      if (!result) return null;
+      // 같은 렌더 안에서 두 번 눌러도 기록이 두 개 생기지 않게 ref 도 바로 갱신
+      stateRef.current = {
+        ...stateRef.current,
+        requests: stateRef.current.requests.map((r) => (r.id === requestId ? result.request : r)),
+      };
+      setState((s) => ({
+        ...s,
+        requests: s.requests.map((r) => (r.id === requestId ? result.request : r)),
+        activityLogs: [result.log, ...s.activityLogs],
+      }));
+      return result.log.id;
+    },
+    []
+  );
 
   const toggleInterestRegion = useCallback((region: string) => {
     setState((s) => ({

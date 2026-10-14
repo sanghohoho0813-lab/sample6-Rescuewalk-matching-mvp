@@ -11,18 +11,9 @@ import { getShelter } from "@/lib/data/shelters";
 import { LAST_STEP, STEP_LABELS } from "@/lib/domain/apply";
 import { withJosa } from "@/lib/utils";
 import { useApplyFlow } from "./useApplyFlow";
-import {
-  AppliedNotice,
-  ApplySummary,
-  DateStep,
-  InfoStep,
-  PromiseStep,
-  ReviewStep,
-  TimeStep,
-  type InfoFieldRefs,
-} from "./steps";
+import { AppliedNotice, ApplySummary, InfoStep, ReviewStep, ScheduleStep, type InfoFieldRefs } from "./steps";
 
-const HINTS = ["산책할 날짜를 선택해주세요", "시간을 선택해주세요", null, "모든 항목을 확인해주세요", null];
+const HINTS = ["날짜와 시간을 골라주세요", null, "세 가지 약속을 확인해주세요"];
 
 const backClass =
   "-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-cream-200";
@@ -52,8 +43,8 @@ function ApplyFlowPage() {
       <div className="container-app max-w-lg py-16 text-center">
         <h1 className="text-lg font-bold text-ink-900">{withJosa(dog.name, "는")} 지금 잠시 쉬는 중이에요</h1>
         <p className="mt-2 text-[15px] text-ink-500">건강하게 돌아오면 다시 만나요.</p>
-        <Link href="/dogs?today=1" className="btn-primary mt-6">
-          오늘 산책 가능한 아이 보기
+        <Link href="/dogs?when=week" className="btn-primary mt-6">
+          이번 주 산책 가능한 아이 보기
         </Link>
       </div>
     );
@@ -108,11 +99,9 @@ function ApplyFlowPage() {
             </div>
           ) : (
             <div key={step} className="mt-8 animate-fade-up motion-reduce:animate-none">
-              {step === 0 && <DateStep flow={flow} />}
-              {step === 1 && <TimeStep flow={flow} dog={dog} />}
-              {step === 2 && <InfoStep flow={flow} fieldRefs={fieldRefs} />}
-              {step === 3 && <PromiseStep flow={flow} />}
-              {step === 4 && <ReviewStep flow={flow} dog={dog} shelter={shelter} />}
+              {step === 0 && <ScheduleStep flow={flow} dog={dog} shelter={shelter} />}
+              {step === 1 && <InfoStep flow={flow} dog={dog} fieldRefs={fieldRefs} />}
+              {step === 2 && <ReviewStep flow={flow} dog={dog} shelter={shelter} />}
             </div>
           )}
 
@@ -147,7 +136,7 @@ function ApplyFlowPage() {
                 <button
                   type="button"
                   onClick={flow.submit}
-                  disabled={submitting}
+                  disabled={submitting || !stepReady}
                   aria-busy={submitting}
                   className="btn-primary btn-lg flex-[2]"
                 >

@@ -6,12 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { DogFace } from "@/components/DogImage";
 import EmptyState from "@/components/EmptyState";
+import VisitStages from "@/components/VisitStages";
+import { ARRIVE_EARLY_MIN, COMMON_BRING, PROVIDED } from "@/lib/visitGuide";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
 import { formatDateFullKo, formatTimeKo, withJosa } from "@/lib/utils";
-
-const PREPARATIONS = ["편한 운동화", "물과 물그릇", "신분증"];
 
 export default function CompletePage() {
   const params = useParams<{ rid: string }>();
@@ -58,13 +58,20 @@ export default function CompletePage() {
         </div>
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-ink-900">산책 신청이 접수됐어요</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-ink-500">
-          보호소가 확인하면 방문예정으로 바뀌어요.
+          보호소가 확인하면 <strong className="font-semibold text-ink-700">{request.applicant.phone}</strong>
+          로 문자를 드려요.
           <br />
           {withJosa(dog.name, "가")} {request.applicant.name}님을 기다릴게요.
         </p>
       </div>
 
-      <div className="card mt-8 overflow-hidden">
+      {/* 앞으로의 진행 — 지금은 '승인' 단계 */}
+      <div className="mt-8 rounded-[20px] bg-white px-3 py-4 ring-1 ring-cream-300">
+        <VisitStages req={request} />
+        <p className="mt-3 text-center text-sm text-ink-500">보호소 승인은 보통 하루 안에 끝나요</p>
+      </div>
+
+      <div className="card mt-4 overflow-hidden">
         <div className="flex items-center gap-4 p-5">
           <span className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl">
             <DogFace dog={dog} sizes="56px" />
@@ -78,31 +85,41 @@ export default function CompletePage() {
         </div>
         <dl className="divide-y divide-cream-200 border-t border-cream-200 text-[15px]">
           <div className="flex gap-4 px-5 py-3">
-            <dt className="w-16 shrink-0 text-ink-400">방문일</dt>
+            <dt className="w-[72px] shrink-0 text-ink-500">방문일</dt>
             <dd className="tnum font-medium text-ink-900">{formatDateFullKo(request.date)}</dd>
           </div>
           <div className="flex gap-4 px-5 py-3">
-            <dt className="w-16 shrink-0 text-ink-400">시간</dt>
+            <dt className="w-[72px] shrink-0 text-ink-500">시간</dt>
             <dd className="tnum font-medium text-ink-900">{formatTimeKo(request.time)}</dd>
           </div>
           <div className="flex gap-4 px-5 py-3">
-            <dt className="w-16 shrink-0 text-ink-400">장소</dt>
+            <dt className="w-[72px] shrink-0 text-ink-500">장소</dt>
             <dd className="text-ink-900">
               <span className="font-medium">{shelter?.name}</span>
               <span className="mt-0.5 block text-sm text-ink-500">{shelter?.address}</span>
             </dd>
           </div>
           <div className="flex gap-4 px-5 py-3">
-            <dt className="w-16 shrink-0 text-ink-400">예약번호</dt>
+            <dt className="w-[72px] shrink-0 text-ink-500">만나는 곳</dt>
+            <dd className="text-ink-900">
+              {shelter?.visit.meetingPoint}
+              <span className="mt-0.5 block text-sm text-ink-500">
+                {ARRIVE_EARLY_MIN}분 전까지 도착해주세요
+              </span>
+            </dd>
+          </div>
+          <div className="flex gap-4 px-5 py-3">
+            <dt className="w-[72px] shrink-0 text-ink-500">예약번호</dt>
             <dd className="tnum font-mono text-sm text-ink-700">{request.reservationNo}</dd>
           </div>
         </dl>
       </div>
 
       <p className="mt-5 text-sm leading-relaxed text-ink-500">
-        <span className="font-semibold text-ink-700">준비물</span> · {PREPARATIONS.join(" · ")}
+        <span className="font-semibold text-ink-700">챙겨 오세요</span> ·{" "}
+        {[...COMMON_BRING, ...(dog.bring ?? [])].join(" · ")}
         <br />
-        방문 10분 전까지 도착해주시고, 현장에서는 보호소 매니저의 안내에 따라주세요.
+        {PROVIDED}
       </p>
 
       <Link href={`/requests/${request.id}`} className="btn-primary btn-lg mt-8 w-full">

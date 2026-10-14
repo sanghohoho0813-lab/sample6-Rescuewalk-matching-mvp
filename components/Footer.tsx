@@ -39,7 +39,10 @@ export default function Footer() {
                 <ul className="mt-2">
                   {col.items.map((l) => (
                     <li key={l.href}>
-                      <Link href={l.href} className="flex min-h-[36px] items-center text-ink-500 hover:text-ink-900">
+                      <Link
+                        href={l.href}
+                        className="flex min-h-[36px] items-center text-ink-500 hover:text-ink-900"
+                      >
                         {l.label}
                       </Link>
                     </li>

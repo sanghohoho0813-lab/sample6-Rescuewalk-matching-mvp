@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { cancel, complete, confirm, groupRequests, isOverdue, nextWalk } from "./requests";
+import {
+  cancel,
+  complete,
+  confirm,
+  currentStageIndex,
+  groupRequests,
+  isOverdue,
+  nextWalk,
+  visitStages,
+} from "./requests";
 import { makeRequest } from "@/lib/test/factories";
 
 const NOW = new Date("2026-10-06T05:00:00.000Z");
@@ -27,15 +36,27 @@ describe("상태 전이", () => {
 
   it("산책 완료 기록은 방문예정에서만", () => {
     expect(complete(makeRequest({ status: "pending" }), { durationMin: 40, note: "" }, ctx)).toBeNull();
-    const result = complete(makeRequest({ status: "confirmed" }), { durationMin: 40, note: "  좋았어요 " }, ctx);
+    const result = complete(
+      makeRequest({ status: "confirmed" }),
+      { durationMin: 40, note: "  좋았어요 " },
+      ctx
+    );
     expect(result?.request.status).toBe("completed");
     expect(result?.log).toMatchObject({ id: "act-1", requestId: "req-1", durationMin: 40, note: "좋았어요" });
   });
 
   it("방문일 전에 기록하면 기록 날짜는 오늘(미래 날짜 기록 방지)", () => {
-    const future = complete(makeRequest({ status: "confirmed", date: "2026-10-09" }), { durationMin: 30, note: "" }, ctx);
+    const future = complete(
+      makeRequest({ status: "confirmed", date: "2026-10-09" }),
+      { durationMin: 30, note: "" },
+      ctx
+    );
     expect(future?.log.date).toBe("2026-10-06");
-    const past = complete(makeRequest({ status: "confirmed", date: "2026-10-01" }), { durationMin: 30, note: "" }, ctx);
+    const past = complete(
+      makeRequest({ status: "confirmed", date: "2026-10-01" }),
+      { durationMin: 30, note: "" },
+      ctx
+    );
     expect(past?.log.date).toBe("2026-10-01");
   });
 
@@ -68,5 +89,62 @@ describe("목록 규칙", () => {
   it("방문일이 지났는데 열린 신청", () => {
     expect(isOverdue(list[5], "2026-10-06")).toBe(true);
     expect(isOverdue(list[3], "2026-10-06")).toBe(false);
+  });
+});
+
+describe("진행 단계 (접수 → 승인 → 방문 예정 → 산책 → 완료)", () => {
+  const before = new Date(2026, 9, 8, 9, 0); // 방문(10/8 10:00) 1시간 전
+  const after = new Date(2026, 9, 8, 11, 0);
+  const states = (r: ReturnType<typeof makeRequest>, now: Date) => visitStages(r, now).map((s) => s.state);
+
+  it("접수 직후에는 보호소 승인을 기다립니다", () => {
+    expect(states(makeRequest({ status: "pending" }), before)).toEqual([
+      "done",
+      "current",
+      "todo",
+      "todo",
+      "todo",
+    ]);
+  });
+
+  it("승인되면 방문 예정, 방문 시각이 지나면 산책 단계", () => {
+    const r = makeRequest({ status: "confirmed", confirmedAt: "2026-10-06T05:00:00.000Z" });
+    expect(states(r, before)).toEqual(["done", "done", "current", "todo", "todo"]);
+    expect(states(r, after)).toEqual(["done", "done", "done", "current", "todo"]);
+    expect(visitStages(r, before)[1].at).toBe("2026-10-06T05:00:00.000Z");
+  });
+
+  it("기록을 남기면 모두 완료", () => {
+    const r = makeRequest({ status: "completed", confirmedAt: "x", completedAt: "2026-10-08T03:00:00.000Z" });
+    expect(states(r, after)).toEqual(["done", "done", "done", "done", "done"]);
+    expect(currentStageIndex(r, after)).toBe(5);
+  });
+
+  it("취소된 신청은 실제로 거친 단계까지만", () => {
+    expect(states(makeRequest({ status: "cancelled" }), before)).toEqual([
+      "done",
+      "todo",
+      "todo",
+      "todo",
+      "todo",
+    ]);
+    expect(states(makeRequest({ status: "cancelled", confirmedAt: "x" }), before)).toEqual([
+      "done",
+      "done",
+      "todo",
+      "todo",
+      "todo",
+    ]);
+  });
+});
+
+describe("산책 관찰 기록", () => {
+  it("관찰은 중복 없이 기록에 남습니다", () => {
+    const r = complete(
+      makeRequest({ status: "confirmed" }),
+      { durationMin: 30, note: "", observations: ["배변했어요", "배변했어요", "사람을 반겼어요"] },
+      { now: new Date("2026-10-06T05:00:00.000Z"), today: "2026-10-06", logId: "a" }
+    );
+    expect(r?.log.observations).toEqual(["배변했어요", "사람을 반겼어요"]);
   });
 });

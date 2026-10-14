@@ -38,7 +38,13 @@ describe("저장값 검증", () => {
     const out = sanitizePersisted(
       {
         favorites: ["dog-a", "dog-a", "unknown", 3, null],
-        requests: [good, null, { id: "bad" }, makeRequest({ id: "x", dogId: "cat-1" }), makeRequest({ id: "t", time: "9시" })],
+        requests: [
+          good,
+          null,
+          { id: "bad" },
+          makeRequest({ id: "x", dogId: "cat-1" }),
+          makeRequest({ id: "t", time: "9시" }),
+        ],
         activityLogs: [{}, { id: "l", dogId: "dog-a", date: "2026-10-01", durationMin: -5 }],
       },
       fallback,

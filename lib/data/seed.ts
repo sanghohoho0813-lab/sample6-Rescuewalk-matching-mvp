@@ -1,4 +1,7 @@
 import type { ActivityLog, WalkRequest } from "@/lib/types";
+import { getDog } from "@/lib/data/dogs";
+import { getShelter } from "@/lib/data/shelters";
+import { scheduledSlots } from "@/lib/domain/schedule";
 import { daysFromToday } from "@/lib/utils";
 
 /**
@@ -11,8 +14,12 @@ import { daysFromToday } from "@/lib/utils";
  *
  * 시연 시나리오가 자연스럽게 이어지도록 설계했습니다.
  * - 송이: 방문예정 → "산책 완료 기록하기"를 누르면 처음 만나는 다섯 번째 친구가 되어
- *   '5마리 친구 만나기' 배지가 열립니다.
- * - 보리: 신청완료(보호소 확인 대기) → 데모 승인 버튼으로 방문예정 전환을 체험할 수 있습니다.
+ *   '5마리 친구' 이정표에 닿습니다.
+ * - 보리: 신청완료(보호소 확인 대기) → 데모 승인 → 기록하면, 한 달 전에 만난 보리를 다시 만나
+ *   '다시 만난 친구'가 됩니다.
+ *
+ * 모든 날짜는 그 아이의 실제 산책 일정(보호소 휴무·산책 요일)에 맞는 날로 고릅니다.
+ * 시드가 일정 규칙을 어기면 "휴무일에 방문예정" 같은 모순이 생기기 때문입니다.
  */
 
 const APPLICANT = { name: "김지우", phone: "010-1234-5678" };
@@ -24,12 +31,19 @@ function isoAt(daysOffset: number, hhmm: string): string {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + daysOffset, h, m).toISOString();
 }
 
-/** 오늘로부터 minDaysAgo일 이상 지난 가장 가까운 토요일 — 주말 배지가 매일 바뀌지 않도록 */
-function saturdayAtLeast(minDaysAgo: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - minDaysAgo);
-  while (d.getDay() !== 6) d.setDate(d.getDate() - 1);
-  return daysFromToday(0, d);
+/**
+ * offset 일 뒤(음수면 전)부터 같은 방향으로 찾아, 그 아이가 그 시간에 산책할 수 있는 첫 날짜.
+ * 미래 일정은 앞으로, 지난 기록은 과거로 찾습니다.
+ */
+function walkDate(dogId: string, offset: number, time: string): { date: string; offset: number } {
+  const dog = getDog(dogId)!;
+  const shelter = getShelter(dog.shelterId)!;
+  const step = offset >= 0 ? 1 : -1;
+  for (let o = offset, i = 0; i < 14; o += step, i++) {
+    const date = daysFromToday(o);
+    if (scheduledSlots(dog, shelter, date).includes(time)) return { date, offset: o };
+  }
+  throw new Error(`시드 일정을 찾지 못했어요: ${dogId} ${time}`);
 }
 
 function reservationNo(dateISO: string, serial: string): string {
@@ -37,11 +51,16 @@ function reservationNo(dateISO: string, serial: string): string {
 }
 
 export function buildSeed(): { requests: WalkRequest[]; activityLogs: ActivityLog[] } {
-  const songiDate = daysFromToday(2);
-  const boriDate = daysFromToday(5);
-  const daniDate = daysFromToday(-6);
-  const chocoDate = daysFromToday(-13);
-  const yeontanDate = daysFromToday(-20);
+  const songi = walkDate("dog-songi", 2, "11:00");
+  const bori = walkDate("dog-bori", 5, "10:00");
+  const dani = walkDate("dog-dani", -6, "16:00");
+  const choco = walkDate("dog-choco", -13, "14:00");
+  const yeontan = walkDate("dog-yeontan", -20, "16:00");
+  const songiDate = songi.date;
+  const boriDate = bori.date;
+  const daniDate = dani.date;
+  const chocoDate = choco.date;
+  const yeontanDate = yeontan.date;
 
   const requests: WalkRequest[] = [
     {
@@ -73,9 +92,9 @@ export function buildSeed(): { requests: WalkRequest[]; activityLogs: ActivityLo
       time: "16:00",
       applicant: { ...APPLICANT, experienced: true, memo: "" },
       status: "completed",
-      createdAt: isoAt(-10, "09:05"),
-      confirmedAt: isoAt(-9, "11:20"),
-      completedAt: isoAt(-6, "17:10"),
+      createdAt: isoAt(dani.offset - 4, "09:05"),
+      confirmedAt: isoAt(dani.offset - 3, "11:20"),
+      completedAt: isoAt(dani.offset, "17:10"),
     },
     {
       id: "req-seed-4",
@@ -85,9 +104,9 @@ export function buildSeed(): { requests: WalkRequest[]; activityLogs: ActivityLo
       time: "14:00",
       applicant: { ...APPLICANT, experienced: false, memo: "첫 봉사예요. 잘 부탁드립니다." },
       status: "completed",
-      createdAt: isoAt(-17, "20:30"),
-      confirmedAt: isoAt(-16, "10:05"),
-      completedAt: isoAt(-13, "15:00"),
+      createdAt: isoAt(choco.offset - 4, "20:30"),
+      confirmedAt: isoAt(choco.offset - 3, "10:05"),
+      completedAt: isoAt(choco.offset, "15:00"),
     },
     {
       id: "req-seed-5",
@@ -97,8 +116,8 @@ export function buildSeed(): { requests: WalkRequest[]; activityLogs: ActivityLo
       time: "16:00",
       applicant: { ...APPLICANT, experienced: false, memo: "" },
       status: "cancelled",
-      createdAt: isoAt(-24, "13:15"),
-      cancelledAt: isoAt(-22, "09:40"),
+      createdAt: isoAt(yeontan.offset - 4, "13:15"),
+      cancelledAt: isoAt(yeontan.offset - 2, "09:40"),
     },
   ];
 
@@ -110,6 +129,7 @@ export function buildSeed(): { requests: WalkRequest[]; activityLogs: ActivityLo
       date: daniDate,
       durationMin: 40,
       note: "단이와 공원 두 바퀴. 벤치에서 같이 쉬면서 교감했어요.",
+      observations: ["리드줄을 잘 따라 걸었어요", "사람을 반겼어요"],
     },
     {
       id: "act-seed-2",
@@ -118,18 +138,19 @@ export function buildSeed(): { requests: WalkRequest[]; activityLogs: ActivityLo
       date: chocoDate,
       durationMin: 45,
       note: "초코 '기다려' 훈련 성공! 간식 두 개로 금방 친해졌어요.",
+      observations: ["소리에 놀랐어요", "배변했어요"],
     },
     {
       id: "act-seed-3",
       dogId: "dog-bori",
-      date: saturdayAtLeast(28),
+      date: walkDate("dog-bori", -28, "15:00").date,
       durationMin: 60,
       note: "보리와 첫 산책. 꼬리를 쉬지 않고 흔들어줘서 행복했어요.",
     },
     {
       id: "act-seed-4",
       dogId: "dog-dubu",
-      date: daysFromToday(-41),
+      date: walkDate("dog-dubu", -41, "14:00").date,
       durationMin: 30,
       note: "두부와 짧은 산책 후 품에 안겨 낮잠. 심장이 녹는 줄 알았네요.",
     },

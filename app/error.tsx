@@ -34,7 +34,10 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
         <button type="button" onClick={resetData} className="btn-secondary btn-lg w-full">
           데모 데이터 되돌리고 홈으로
         </button>
-        <Link href="/" className="mt-1 flex min-h-[44px] items-center justify-center text-[15px] text-ink-500">
+        <Link
+          href="/"
+          className="mt-1 flex min-h-[44px] items-center justify-center text-[15px] text-ink-500"
+        >
           홈으로
         </Link>
       </div>

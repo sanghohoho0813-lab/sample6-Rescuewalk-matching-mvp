@@ -25,7 +25,9 @@ export default function FavoriteButton({
         e.preventDefault();
         e.stopPropagation();
         toggleFavorite(dogId);
-        showToast(active ? `${withJosa(dogName, "를")} 찜 목록에서 뺐어요` : `${withJosa(dogName, "를")} 찜했어요`);
+        showToast(
+          active ? `${withJosa(dogName, "를")} 찜 목록에서 뺐어요` : `${withJosa(dogName, "를")} 찜했어요`
+        );
       }}
       className={cn(
         "flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-card backdrop-blur transition-all duration-200 hover:scale-110 active:scale-95",

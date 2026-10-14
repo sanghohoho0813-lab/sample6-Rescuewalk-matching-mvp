@@ -66,13 +66,5 @@ export function DogFace({
   className?: string;
   sizes?: string;
 }) {
-  return (
-    <DogImage
-      dog={dog}
-      variant="face"
-      aspect="aspect-square"
-      sizes={sizes}
-      className={className}
-    />
-  );
+  return <DogImage dog={dog} variant="face" aspect="aspect-square" sizes={sizes} className={className} />;
 }

@@ -8,9 +8,7 @@ export default function Logo({ compact = false }: { compact?: boolean }) {
         <PawPrint className="h-5 w-5" strokeWidth={2.2} />
       </span>
       <span className="flex flex-col leading-none">
-        <span className="text-lg font-extrabold tracking-tight text-sage-700">
-          RescueWalk
-        </span>
+        <span className="text-lg font-extrabold tracking-tight text-sage-700">RescueWalk</span>
         {/* 모바일 헤더에서는 작은 부제가 읽히지 않으므로 숨깁니다 */}
         {!compact && (
           <span className="mt-1 hidden text-xs font-medium text-ink-400 sm:block">따뜻한 발걸음</span>

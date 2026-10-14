@@ -51,6 +51,7 @@ export function sanitizeLog(v: unknown, dogExists: DogExists): ActivityLog | nul
     date: v.date,
     durationMin: v.durationMin,
     note: typeof v.note === "string" ? v.note : "",
+    observations: Array.isArray(v.observations) ? v.observations.filter(isStr).slice(0, 10) : undefined,
   };
 }
 

@@ -26,7 +26,9 @@ export default function DogRail({
       )}
     >
       {Children.map(children, (child) =>
-        child ? <li className="w-[80%] max-w-[340px] shrink-0 snap-start sm:w-auto sm:max-w-none">{child}</li> : null
+        child ? (
+          <li className="w-[80%] max-w-[340px] shrink-0 snap-start sm:w-auto sm:max-w-none">{child}</li>
+        ) : null
       )}
     </ul>
   );

@@ -23,9 +23,7 @@ export default function MyWalkTabs() {
             aria-current={active ? "page" : undefined}
             className={cn(
               "-mb-px flex min-h-[44px] items-center border-b-2 text-[15px] font-semibold transition-colors",
-              active
-                ? "border-ink-900 text-ink-900"
-                : "border-transparent text-ink-400 hover:text-ink-700"
+              active ? "border-ink-900 text-ink-900" : "border-transparent text-ink-400 hover:text-ink-700"
             )}
           >
             {t.label}
