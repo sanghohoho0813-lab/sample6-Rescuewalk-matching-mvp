@@ -61,10 +61,11 @@ function ApplyFlowPage() {
   };
 
   return (
-    <div className="container-app max-w-2xl pb-32 pt-4 sm:pb-10 md:pt-8 lg:max-w-5xl">
+    <div className="container-app max-w-2xl pb-32 sm:pb-10 md:pt-8 lg:max-w-5xl">
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-14">
         <div className="min-w-0">
-          <div className="flex items-center gap-3">
+          {/* 모바일은 공용 헤더 대신 이 줄이 화면 위에 붙습니다(신청에 집중) */}
+          <div className="sticky top-0 z-30 -mx-4 flex items-center gap-3 border-b border-cream-300/60 bg-cream-50/95 px-4 py-2 backdrop-blur-md sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
             {step === 0 ? (
               <Link href={`/dogs/${dog.id}`} aria-label={`${dog.name} 소개로 돌아가기`} className={backClass}>
                 <ArrowLeft className="h-5 w-5" />

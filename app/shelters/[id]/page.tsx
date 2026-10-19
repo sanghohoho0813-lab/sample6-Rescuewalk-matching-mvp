@@ -44,21 +44,43 @@ export default function ShelterDetailPage({ params }: { params: { id: string } }
         <ArrowLeft className="h-4 w-4" aria-hidden /> 보호소
       </Link>
 
-      <div className="relative mt-2 aspect-[16/9] w-full overflow-hidden rounded-[24px] sm:aspect-[21/8]">
+      {/* 사진 위에 이름과 지금 운영 여부 — 상용 앱의 매장 상세처럼 '어디인지'를 한 장면으로 */}
+      <div className="relative mt-2 aspect-[4/3] w-full overflow-hidden rounded-[28px] bg-cream-200 sm:aspect-[21/9]">
         <ShelterImage shelter={shelter} sizes="(max-width: 1280px) 100vw, 1200px" priority />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-t from-[#1c170f]/85 via-[#1c170f]/25 via-50% to-transparent"
+        />
+        <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="chip bg-white/15 font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm">
+              {shelter.region}
+            </span>
+            <ShelterOpenNow shelter={shelter} />
+          </div>
+          <h1 className="mt-2.5 text-[28px] font-extrabold leading-tight tracking-[-0.02em] sm:text-[36px]">
+            {shelter.name}
+          </h1>
+          <p className="mt-1 max-w-xl text-[15px] leading-relaxed text-white/90 sm:text-[17px]">
+            {shelter.intro}
+          </p>
+        </div>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-sage-700">{shelter.region}</p>
-            <ShelterOpenNow shelter={shelter} />
-          </div>
-          <h1 className="page-title mt-1">{shelter.name}</h1>
-          <p className="mt-2 text-[17px] text-ink-700">{shelter.intro}</p>
-          <p className="mt-1.5 text-[15px] text-ink-500">
-            <span className="tnum">{shelter.hours}</span> · {closedDaysLabel(shelter)}
-          </p>
+          <dl className="grid grid-cols-3 divide-x divide-cream-200 rounded-2xl bg-white py-3.5 ring-1 ring-cream-300/70">
+            {[
+              { label: "운영 시간", value: shelter.hours.replace(/\s/g, "") },
+              { label: "쉬는 날", value: closedDaysLabel(shelter) },
+              { label: "산책 가능", value: `${walkable}마리` },
+            ].map((g) => (
+              <div key={g.label} className="flex flex-col-reverse items-center gap-0.5 px-2 text-center">
+                <dt className="text-[13px] text-ink-500">{g.label}</dt>
+                <dd className="tnum text-[15px] font-bold text-ink-900">{g.value}</dd>
+              </div>
+            ))}
+          </dl>
           <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="보호소 특징">
             {shelter.features.map((f) => (
               <li key={f} className="chip bg-sage-50 text-sage-800 ring-1 ring-sage-100">

@@ -9,7 +9,7 @@ import type { Dog } from "@/lib/types";
 
 /**
  * 다음 산책 가능 일정 — 방문자의 지금 시각 기준(브라우저에서만 계산).
- * badge: 사진 위 표시 / line: 본문 한 줄
+ * badge: 사진 위 표시 / line: 본문 한 줄 / stack: 하단 고정 바의 두 줄(이름표 + 일정)
  */
 export default function NextWalk({
   dog,
@@ -17,7 +17,7 @@ export default function NextWalk({
   className,
 }: {
   dog: Dog;
-  variant: "badge" | "line";
+  variant: "badge" | "line" | "stack";
   className?: string;
 }) {
   const clock = useClock();
@@ -48,6 +48,22 @@ export default function NextWalk({
         <span className="h-1.5 w-1.5 rounded-full bg-sage-500" aria-hidden />
         오늘 산책 가능
       </span>
+    );
+  }
+
+  if (variant === "stack") {
+    return (
+      <p className={cn("min-w-0 leading-tight", className)}>
+        <span className="block text-[13px] text-ink-500">{opening || !label ? "다음 가능" : "일정"}</span>
+        <span
+          className={cn(
+            "tnum mt-0.5 block min-h-[22px] text-base font-bold",
+            today ? "text-sage-700" : opening ? "text-ink-900" : "text-ink-500"
+          )}
+        >
+          {label ?? ""}
+        </span>
+      </p>
     );
   }
 

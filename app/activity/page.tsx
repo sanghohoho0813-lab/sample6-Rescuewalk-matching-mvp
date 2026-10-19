@@ -3,7 +3,7 @@
 import { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, CheckCircle2, ChevronRight, Repeat } from "lucide-react";
+import { Check, CheckCircle2, ChevronRight, PawPrint, Repeat } from "lucide-react";
 import { DogFace } from "@/components/DogImage";
 import EmptyState from "@/components/EmptyState";
 import MyWalkTabs from "@/components/MyWalkTabs";
@@ -102,28 +102,56 @@ function ActivityContent() {
         </div>
       )}
 
-      {/* 핵심 — 함께 걸은 시간 */}
-      <section aria-label="내 활동 요약" className="rounded-[20px] bg-white p-5 shadow-card sm:p-6">
-        <p className="text-sm text-ink-500">아이들과 함께 걸은 시간</p>
-        <p className="tnum mt-1 text-[32px] font-bold leading-none tracking-tight text-ink-900">
-          {formatDuration(impact.totalMinutes)}
-        </p>
-        <p className="mt-2 text-[15px] text-ink-500">
-          이번 달 <span className="tnum font-semibold text-ink-900">{impact.thisMonth.walks}회</span>
-          {impact.thisMonth.walks > 0 && (
-            <span className="tnum"> · {formatDuration(impact.thisMonth.minutes)}</span>
-          )}
-        </p>
-        <dl className="mt-5 grid grid-cols-2 gap-y-4 border-t border-cream-200 pt-5 sm:grid-cols-4">
+      {/* 핵심 — 함께 걸은 시간. 이 화면의 한 장면이므로 브랜드 색 면 위에 */}
+      <section
+        aria-label="내 활동 요약"
+        className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-sage-800 to-sage-700 p-5 text-white shadow-card sm:p-7"
+      >
+        <PawPrint
+          aria-hidden
+          className="pointer-events-none absolute -right-6 -top-6 h-36 w-36 rotate-12 text-white/[0.06]"
+        />
+        <div className="relative flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-white/80">아이들과 함께 걸은 시간</p>
+            <p className="tnum mt-1.5 text-[34px] font-extrabold leading-none tracking-tight sm:text-[40px]">
+              {formatDuration(impact.totalMinutes)}
+            </p>
+            <p className="mt-2.5 text-[15px] text-white/85">
+              이번 달 <span className="tnum font-semibold text-white">{impact.thisMonth.walks}회</span>
+              {impact.thisMonth.walks > 0 && (
+                <span className="tnum"> · {formatDuration(impact.thisMonth.minutes)}</span>
+              )}
+            </p>
+          </div>
+          {/* 만난 아이들의 얼굴 — 숫자보다 먼저 떠오르는 것 */}
+          <ul className="flex shrink-0 -space-x-3" aria-label="만난 아이들">
+            {impact.bonds.slice(0, 4).map((b) => {
+              const dog = getDog(b.dogId);
+              return dog ? (
+                <li
+                  key={b.dogId}
+                  className="h-11 w-11 overflow-hidden rounded-full ring-2 ring-sage-700 sm:h-12 sm:w-12"
+                >
+                  <DogFace dog={dog} sizes="48px" />
+                </li>
+              ) : null;
+            })}
+          </ul>
+        </div>
+        <dl className="relative mt-6 grid grid-cols-4 divide-x divide-white/15 rounded-2xl bg-white/10 py-3.5 ring-1 ring-white/10">
           {[
-            { label: "산책", value: `${impact.totalWalks}회` },
-            { label: "만난 아이", value: `${impact.uniqueDogs}마리` },
-            { label: "다시 만난 아이", value: `${impact.revisitedDogs}마리` },
-            { label: "함께한 보호소", value: `${impact.shelters}곳` },
+            { label: "산책", value: impact.totalWalks, unit: "회" },
+            { label: "만난 아이", value: impact.uniqueDogs, unit: "마리" },
+            { label: "다시 만난", value: impact.revisitedDogs, unit: "마리" },
+            { label: "보호소", value: impact.shelters, unit: "곳" },
           ].map((s) => (
-            <div key={s.label} className="flex flex-col-reverse">
-              <dt className="mt-0.5 text-sm text-ink-500">{s.label}</dt>
-              <dd className="tnum text-xl font-bold text-ink-900">{s.value}</dd>
+            <div key={s.label} className="flex flex-col-reverse items-center px-1 text-center">
+              <dt className="mt-0.5 text-[13px] text-white/80">{s.label}</dt>
+              <dd className="tnum text-lg font-bold">
+                {s.value}
+                <span className="ml-0.5 text-[13px] font-semibold text-white/80">{s.unit}</span>
+              </dd>
             </div>
           ))}
         </dl>
@@ -139,7 +167,7 @@ function ActivityContent() {
 
       {/* 아이별 관계 */}
       <section className="mt-10">
-        <h2 className="text-base font-bold text-ink-900">함께 걸은 아이들</h2>
+        <h2 className="text-lg font-bold text-ink-900">함께 걸은 아이들</h2>
         <ul className="mt-3 divide-y divide-cream-200 border-y border-cream-200">
           {impact.bonds.map((b) => {
             const dog = getDog(b.dogId);
@@ -160,10 +188,10 @@ function ActivityContent() {
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 block truncate text-sm text-ink-500">
+                    <span className="mt-0.5 block text-sm text-ink-500">
                       <span className="tnum">{b.walks}번</span> ·{" "}
-                      <span className="tnum">{formatDuration(b.minutes)}</span> · 마지막{" "}
-                      <span className="tnum">{formatDateKo(b.lastDate)}</span>
+                      <span className="tnum">{formatDuration(b.minutes)}</span>
+                      <span className="tnum block text-[13px]">마지막 {formatDateKo(b.lastDate)}</span>
                     </span>
                   </span>
                 </Link>
@@ -184,7 +212,7 @@ function ActivityContent() {
 
       {/* 이정표 — 게임 점수가 아니라 기준선 */}
       <section className="mt-10">
-        <h2 className="text-base font-bold text-ink-900">이정표</h2>
+        <h2 className="text-lg font-bold text-ink-900">이정표</h2>
         <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
           {MILESTONES.map((m) => {
             const done = m.achieved(impact);
@@ -219,7 +247,7 @@ function ActivityContent() {
 
       {/* 산책 일지 */}
       <section className="mt-10">
-        <h2 className="text-base font-bold text-ink-900">산책 일지</h2>
+        <h2 className="text-lg font-bold text-ink-900">산책 일지</h2>
         <ul className="mt-3 divide-y divide-cream-200 border-y border-cream-200">
           {logs.map((log) => {
             const dog = getDog(log.dogId);

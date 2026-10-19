@@ -10,8 +10,9 @@ import MyWalkTabs from "@/components/MyWalkTabs";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
-import { groupRequests, isOpen, isOverdue } from "@/lib/domain/requests";
-import { cn, formatDateKo, formatTimeKo, relativeDayLabel, todayISO } from "@/lib/utils";
+import { currentStageIndex, groupRequests, isOpen, isOverdue } from "@/lib/domain/requests";
+import { useClock } from "@/lib/useClock";
+import { cn, formatDateKo, formatTimeKo, relativeDayLabel, todayISO, withJosa } from "@/lib/utils";
 import type { WalkRequest, WalkRequestStatus } from "@/lib/types";
 
 const FILTERS: { key: WalkRequestStatus | "all"; label: string }[] = [
@@ -71,6 +72,71 @@ function RequestRow({ req, today }: { req: WalkRequest; today: string }) {
   );
 }
 
+const TRACK_NOTE = [
+  "",
+  "보호소가 신청을 확인하고 있어요",
+  "방문 확정 · 10분 전까지 도착해주세요",
+  "산책을 마쳤다면 기록을 남겨주세요",
+];
+
+/**
+ * 가장 가까운 산책 — 주문 추적 카드처럼 지금 어느 단계인지(접수 → 승인 → 방문 예정 → 산책 → 완료)를
+ * 막대 다섯 칸으로 보여줍니다. 단계 계산은 신청 상세와 같은 규칙(currentStageIndex).
+ */
+function TrackingCard({ req, today }: { req: WalkRequest; today: string }) {
+  const clock = useClock();
+  const dog = getDog(req.dogId);
+  if (!dog) return null;
+  const shelter = getShelter(dog.shelterId);
+  const idx = clock ? currentStageIndex(req, clock.now) : -1;
+
+  return (
+    <Link
+      href={`/requests/${req.id}`}
+      className="group block overflow-hidden rounded-[24px] bg-white shadow-card ring-1 ring-cream-300/60 transition-shadow hover:shadow-card-hover"
+    >
+      <div className="flex items-center gap-4 p-5 pb-4">
+        <span className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl">
+          <DogFace dog={dog} sizes="64px" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold text-sage-700">다가오는 산책</span>
+          <span className="block truncate text-lg font-bold text-ink-900">
+            {withJosa(dog.name, "와")}의 산책
+          </span>
+          <span className="tnum block text-sm text-ink-700">
+            {formatDateKo(req.date)} {formatTimeKo(req.time)}
+          </span>
+          <span className="block truncate text-[13px] text-ink-500">{shelter?.name}</span>
+        </span>
+        <span className="tnum shrink-0 rounded-full bg-sage-50 px-3 py-1.5 text-sm font-bold text-sage-700 ring-1 ring-sage-100">
+          {relativeDayLabel(req.date, today)}
+        </span>
+      </div>
+      <div className="border-t border-cream-200 bg-cream-50/60 px-5 py-4">
+        <div className="grid grid-cols-5 gap-1.5" aria-hidden>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <span
+              key={i}
+              className={cn(
+                "h-1.5 rounded-full",
+                i < idx ? "bg-sage-500" : i === idx ? "bg-tangerine-500" : "bg-cream-300"
+              )}
+            />
+          ))}
+        </div>
+        <p className="mt-2.5 flex items-center justify-between gap-3 text-sm">
+          <span className="min-w-0 truncate text-ink-700">{idx > 0 ? TRACK_NOTE[idx] : ""}</span>
+          <span className="flex shrink-0 items-center font-semibold text-ink-900">
+            자세히{" "}
+            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+          </span>
+        </p>
+      </div>
+    </Link>
+  );
+}
+
 export default function RequestsPage() {
   const { requests, hydrated } = useStore();
   const [filter, setFilter] = useState<WalkRequestStatus | "all">("all");
@@ -88,6 +154,8 @@ export default function RequestsPage() {
     () => (filter === "all" ? [] : [...upcoming, ...past].filter((r) => r.status === filter)),
     [filter, upcoming, past]
   );
+  const next = upcoming.find((r) => r.date >= today) ?? null;
+  const rest = upcoming.filter((r) => r !== next);
 
   return (
     <div className="container-app max-w-3xl py-8 md:py-10">
@@ -162,11 +230,17 @@ export default function RequestsPage() {
                 </Link>
               </div>
             ) : (
-              <ul className="space-y-3">
-                {upcoming.map((r) => (
-                  <RequestRow key={r.id} req={r} today={today} />
-                ))}
-              </ul>
+              <>
+                {/* 방문일이 남은 가장 가까운 산책은 진행 카드로, 나머지는 목록으로 */}
+                {next && <TrackingCard req={next} today={today} />}
+                {rest.length > 0 && (
+                  <ul className={cn("space-y-3", next && "mt-3")}>
+                    {rest.map((r) => (
+                      <RequestRow key={r.id} req={r} today={today} />
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
           </section>
           {past.length > 0 && (

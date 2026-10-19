@@ -35,46 +35,47 @@ export default function MyPage() {
 
   return (
     <div className="container-app max-w-4xl py-8 md:py-12">
-      {/* 프로필 */}
-      <section className="flex items-center gap-4">
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-sage-100 text-sage-700">
-          <UserRound className="h-8 w-8" />
-        </span>
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-ink-900">
-            김지우님
-            <span className="rounded-md bg-cream-200 px-2 py-0.5 text-[13px] font-semibold text-ink-500">
-              데모 계정
-            </span>
-          </h1>
-          <p className="mt-1 text-[15px] text-ink-500">
-            {hydrated && stats.totalWalks > 0
-              ? `지금까지 ${stats.uniqueDogs}마리의 아이들과 ${stats.totalWalks}번 걸었어요.`
-              : "오늘은 어떤 친구와 산책할까요?"}
-          </p>
+      {/* 프로필 + 요약 — 한 장의 카드로 */}
+      <section className="overflow-hidden rounded-[24px] bg-white shadow-card ring-1 ring-cream-300/60">
+        <div className="flex items-center gap-4 p-5 sm:p-6">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sage-100 to-sage-200 text-sage-700">
+            <UserRound className="h-8 w-8" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <h1 className="flex flex-wrap items-center gap-2 text-[22px] font-bold tracking-tight text-ink-900">
+              김지우님
+              <span className="rounded-full bg-cream-200 px-2.5 py-0.5 text-[13px] font-semibold text-ink-500">
+                데모 계정
+              </span>
+            </h1>
+            <p className="mt-1 text-[15px] text-ink-500">
+              {hydrated && stats.totalWalks > 0
+                ? `지금까지 ${stats.uniqueDogs}마리의 아이들과 ${stats.totalWalks}번 걸었어요.`
+                : "오늘은 어떤 친구와 산책할까요?"}
+            </p>
+          </div>
         </div>
-      </section>
 
-      {/* 요약 */}
-      <nav
-        aria-label="내 산책 요약"
-        className="mt-8 grid grid-cols-3 divide-x divide-cream-300 rounded-[20px] bg-white py-4 shadow-card"
-      >
-        {[
-          { href: "/requests", label: "예정된 산책", value: `${upcoming}건` },
-          { href: "/activity", label: "활동 기록", value: `${stats.totalWalks}회` },
-          { href: "#favorites", label: "찜한 아이", value: `${favorites.length}마리` },
-        ].map((s) => (
-          <Link
-            key={s.label}
-            href={s.href}
-            className="flex flex-col items-center px-2 py-1 hover:text-sage-700"
-          >
-            <span className="tnum text-xl font-bold text-ink-900">{hydrated ? s.value : "–"}</span>
-            <span className="mt-0.5 text-[13px] text-ink-400">{s.label}</span>
-          </Link>
-        ))}
-      </nav>
+        <nav
+          aria-label="내 산책 요약"
+          className="grid grid-cols-3 divide-x divide-cream-200 border-t border-cream-200 bg-cream-50/70"
+        >
+          {[
+            { href: "/requests", label: "예정된 산책", value: `${upcoming}건` },
+            { href: "/activity", label: "활동 기록", value: `${stats.totalWalks}회` },
+            { href: "#favorites", label: "찜한 아이", value: `${favorites.length}마리` },
+          ].map((s) => (
+            <Link
+              key={s.label}
+              href={s.href}
+              className="flex flex-col items-center px-2 py-4 transition-colors hover:bg-white"
+            >
+              <span className="tnum text-xl font-bold text-ink-900">{hydrated ? s.value : "–"}</span>
+              <span className="mt-0.5 text-[13px] text-ink-500">{s.label}</span>
+            </Link>
+          ))}
+        </nav>
+      </section>
 
       {/* 찜한 강아지 */}
       <section id="favorites" className="mt-12 scroll-mt-24">

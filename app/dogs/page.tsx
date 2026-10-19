@@ -239,8 +239,8 @@ function DogsBrowser() {
   const ready = !needsClock || !!clock;
 
   return (
-    <div className="container-app py-8 md:py-10">
-      <header className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 lg:mb-6">
+    <div className="container-app pb-8 pt-6 md:pb-10 md:pt-10">
+      <header className="mb-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 lg:mb-6">
         <div>
           <h1 className="page-title">강아지 찾기</h1>
           <p className="mt-1.5 text-[15px] text-ink-500" aria-live="polite">
@@ -267,8 +267,8 @@ function DogsBrowser() {
         </label>
       </header>
 
-      {/* 모바일 · 태블릿 — 필터 시트 + 자주 쓰는 조건은 바로 */}
-      <div className="no-scrollbar -mx-4 mb-5 flex items-center gap-2 overflow-x-auto px-4 lg:hidden">
+      {/* 모바일 · 태블릿 — 필터 시트 + 자주 쓰는 조건은 바로. 목록을 내려도 헤더 아래에 붙어 있음 */}
+      <div className="no-scrollbar sticky top-16 z-20 -mx-4 mb-5 flex items-center gap-2 overflow-x-auto border-b border-cream-300/60 bg-cream-50/95 px-4 py-2.5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:hidden">
         <button
           type="button"
           onClick={() => setSheetOpen(true)}

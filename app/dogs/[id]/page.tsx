@@ -72,50 +72,82 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
     { label: "다른 강아지", ...DOGS[dog.match.dogs] },
   ];
 
+  const glance = [
+    { label: "산책 난이도", value: dog.difficulty },
+    { label: "추천 산책", value: dog.walkNote.recommendedDuration },
+    { label: "거리", value: `${dog.distanceKm}km` },
+  ];
+
   return (
     <>
-      <div className="container-app pb-40 pt-4 md:pt-8 lg:pb-10">
-        <BackToDogs />
+      <div className="container-app pb-40 md:pt-8 lg:pb-10">
+        <BackToDogs className="hidden md:inline-flex" />
 
-        <div className="mt-2 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
+        <div className="grid grid-cols-1 md:mt-2 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
           <div className="min-w-0">
-            <div className="relative overflow-hidden rounded-[24px]">
+            {/* 모바일: 사진이 화면 위·양옆까지 차고, 본문이 그 위로 살짝 올라오는 시트 / PC: 둥근 사진 */}
+            <div className="relative -mx-4 overflow-hidden sm:-mx-6 md:mx-0 md:rounded-[28px]">
               <DogImage
                 dog={dog}
-                aspect="aspect-[4/3] sm:aspect-[16/10]"
+                aspect="aspect-square sm:aspect-[16/11] md:aspect-[16/10]"
                 objectPosition="50% 34%"
                 sizes="(max-width: 1024px) 100vw, 720px"
                 priority
                 className={resting ? "grayscale-[35%]" : undefined}
               />
-              <NextWalk dog={dog} variant="badge" className="absolute left-4 top-4" />
-              <FavoriteButton dogId={dog.id} dogName={dog.name} className="absolute right-4 top-4" />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/25 to-transparent md:hidden"
+              />
+              <BackToDogs
+                variant="overlay"
+                className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] md:hidden"
+              />
+              <FavoriteButton
+                dogId={dog.id}
+                dogName={dog.name}
+                className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))]"
+              />
+              <NextWalk dog={dog} variant="badge" className="absolute bottom-10 left-4 md:bottom-4" />
             </div>
 
-            {/* 이름 · 한 줄 성격 · 기본 정보 */}
-            <header className="mt-6">
-              <h1 className="text-[28px] font-bold tracking-tight text-ink-900 sm:text-[32px]">{dog.name}</h1>
-              <p className="mt-1 text-[17px] text-ink-700">{dog.headline}</p>
-              <p className="mt-2 text-[15px] text-ink-500">
-                {dog.breed} · {dog.age}살 · {dog.gender}
-                {dog.neutered ? "(중성화)" : ""} · {dog.size} <span className="tnum">{dog.weightKg}kg</span>
-              </p>
-              <p className="mt-0.5 text-[15px] text-ink-500">
-                <Link
-                  href={`/shelters/${shelter?.id}`}
-                  className="underline-offset-4 hover:text-ink-900 hover:underline"
-                >
-                  {shelter?.name}
-                </Link>{" "}
-                · {shelter?.address.split(" ").slice(0, 2).join(" ")}{" "}
-                <span className="tnum">{dog.distanceKm}km</span>
-              </p>
-            </header>
+            <div className="relative -mx-4 -mt-6 rounded-t-[28px] bg-cream-50 px-4 pt-6 sm:-mx-6 sm:px-6 md:mx-0 md:mt-0 md:rounded-none md:px-0 md:pt-0">
+              {/* 이름 · 한 줄 성격 · 기본 정보 */}
+              <header className="md:mt-7">
+                <p className="text-sm font-semibold text-sage-700">
+                  <Link href={`/shelters/${shelter?.id}`} className="underline-offset-4 hover:underline">
+                    {shelter?.name}
+                  </Link>
+                  <span className="font-normal text-ink-500">
+                    {" "}
+                    · {shelter?.address.split(" ").slice(0, 2).join(" ")}
+                  </span>
+                </p>
+                <h1 className="mt-1 text-[30px] font-extrabold tracking-[-0.02em] text-ink-900 sm:text-[34px]">
+                  {dog.name}
+                </h1>
+                <p className="mt-0.5 text-[17px] text-ink-700">{dog.headline}</p>
+                <p className="mt-2 text-[15px] text-ink-500">
+                  {dog.breed} · {dog.age}살 · {dog.gender}
+                  {dog.neutered ? "(중성화)" : ""} · {dog.size} <span className="tnum">{dog.weightKg}kg</span>
+                </p>
+              </header>
+
+              {/* 한눈에 — 상용 앱의 정보 줄처럼 세 가지 수치만 */}
+              <dl className="mt-5 grid grid-cols-3 divide-x divide-cream-200 rounded-2xl bg-white py-3.5 ring-1 ring-cream-300/70">
+                {glance.map((g) => (
+                  <div key={g.label} className="flex flex-col-reverse items-center gap-0.5 px-2 text-center">
+                    <dt className="text-[13px] text-ink-500">{g.label}</dt>
+                    <dd className="tnum text-[15px] font-bold text-ink-900">{g.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
 
             {/* 1. 누구에게 맞는지 — 신청 전 가장 먼저 판단할 것 */}
             <section
               aria-labelledby="fit-title"
-              className="mt-6 rounded-[20px] border border-cream-300 bg-white p-5 sm:p-6"
+              className="mt-4 rounded-[20px] border border-cream-300 bg-white p-5 sm:p-6"
             >
               <p id="fit-title" className="flex items-center gap-1.5 text-sm font-semibold text-sage-700">
                 <ShieldCheck className="h-4 w-4" aria-hidden /> 이런 분께 추천해요
@@ -132,10 +164,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
                 ))}
               </dl>
               <p className="mt-4 border-t border-cream-200 pt-3 text-sm text-ink-500">
-                산책 난이도 <strong className="font-semibold text-ink-900">{dog.difficulty}</strong> · 추천
-                산책{" "}
-                <strong className="font-semibold text-ink-900">{dog.walkNote.recommendedDuration}</strong> ·{" "}
-                {dog.walkNote.kidFriendly ? "아이 동반 가능" : "성인 봉사자 추천"}
+                {dog.walkNote.kidFriendly ? "아이와 함께 와도 괜찮아요" : "성인 봉사자에게 추천해요"}
               </p>
               {dog.match.experience === "experienced" && (
                 <p className="mt-3 flex gap-2 rounded-xl bg-tangerine-50 p-3 text-sm leading-relaxed text-ink-900">

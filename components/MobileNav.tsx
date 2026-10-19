@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarCheck, Dog, Home, PawPrint, UserRound } from "lucide-react";
+import { isFocusRoute } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -13,16 +14,10 @@ const ITEMS = [
   { href: "/me", label: "마이", icon: UserRound, exact: false },
 ];
 
-/**
- * 하단 내비를 숨기는 화면.
- * 강아지 상세(하단 고정 신청 버튼)와 신청 5단계(하단 고정 진행 버튼)는
- * 화면의 주요 행동이 하단에 고정되므로, 고정 바가 두 겹으로 쌓이지 않게 내비를 뺍니다.
- */
-const HIDE_ON = [/^\/dogs\/[^/]+\/?$/, /^\/dogs\/[^/]+\/apply\/?$/];
-
 export default function MobileNav() {
   const pathname = usePathname();
-  if (HIDE_ON.some((re) => re.test(pathname))) return null;
+  // 강아지 상세·신청 흐름은 화면의 주요 행동이 하단에 고정되므로 내비를 뺍니다
+  if (isFocusRoute(pathname)) return null;
 
   return (
     <nav
@@ -38,11 +33,19 @@ export default function MobileNav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors duration-200",
-                active ? "text-sage-700" : "text-ink-400 hover:text-ink-700"
+                "group flex min-h-[60px] flex-col items-center justify-center gap-1 text-xs transition-colors duration-200",
+                active ? "font-semibold text-sage-800" : "font-medium text-ink-400 hover:text-ink-700"
               )}
             >
-              <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.9} />
+              {/* 현재 화면은 아이콘 뒤에 옅은 알약 모양 — 색만으로 구분하지 않게 */}
+              <span
+                className={cn(
+                  "flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200",
+                  active ? "bg-sage-100" : "group-active:bg-cream-200"
+                )}
+              >
+                <Icon className="h-5 w-5" strokeWidth={active ? 2.3 : 1.9} aria-hidden />
+              </span>
               {label}
             </Link>
           );

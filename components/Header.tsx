@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Heart, UserRound } from "lucide-react";
 import Logo from "@/components/Logo";
+import { isFocusRoute } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 
@@ -19,7 +20,13 @@ export default function Header() {
   const { favorites, hydrated } = useStore();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-cream-300/60 bg-cream-50/90 backdrop-blur-md">
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b border-cream-300/60 bg-cream-50/90 backdrop-blur-md",
+        // 상세·신청은 모바일에서 자체 뒤로가기를 가진 집중 화면(사진이 화면 위까지)
+        isFocusRoute(pathname) && "hidden md:block"
+      )}
+    >
       <div className="container-app flex h-16 items-center justify-between gap-4">
         <Logo />
 
