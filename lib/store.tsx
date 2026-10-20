@@ -33,9 +33,16 @@ import { STORE_KEY } from "@/lib/storageKeys";
 // v2: 날짜가 오늘 기준 상대값으로 바뀐 시드. 이전 버전의 고정 날짜 데이터는 버립니다.
 const LS_KEY = STORE_KEY;
 
+/** 토스트의 되돌리기 같은 한 번의 행동 */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface ToastState {
   id: number;
   message: string;
+  action?: ToastAction;
 }
 
 interface StoreState extends PersistedState {
@@ -54,7 +61,10 @@ interface StoreState extends PersistedState {
   ) => string | null;
   toggleInterestRegion: (region: string) => void;
   resetDemo: () => void;
-  showToast: (message: string) => void;
+  /** action 이 있으면 누를 시간을 조금 더 줍니다 */
+  showToast: (message: string, action?: ToastAction) => void;
+  /** 토스트를 바로 닫습니다(행동을 누른 뒤) */
+  hideToast: () => void;
   /** 새 신청·기록 id 발급 */
   newId: (prefix: string) => string;
 }
@@ -135,10 +145,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state, hydrated]);
 
-  const showToast = useCallback((message: string) => {
+  const showToast = useCallback((message: string, action?: ToastAction) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast({ id: Date.now(), message });
-    toastTimer.current = setTimeout(() => setToast(null), 2600);
+    setToast({ id: Date.now(), message, action });
+    toastTimer.current = setTimeout(() => setToast(null), action ? 4500 : 2600);
+  }, []);
+
+  const hideToast = useCallback(() => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(null);
   }, []);
 
   const toggleFavorite = useCallback((dogId: string) => {
@@ -228,6 +243,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleInterestRegion,
       resetDemo,
       showToast,
+      hideToast,
       newId,
     }),
     [
@@ -243,6 +259,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleInterestRegion,
       resetDemo,
       showToast,
+      hideToast,
     ]
   );
 

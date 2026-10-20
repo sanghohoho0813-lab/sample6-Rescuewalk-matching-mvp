@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AlertTriangle, Check, ChevronRight, ShieldCheck } from "lucide-react";
 import DogImage from "@/components/DogImage";
 import FavoriteButton from "@/components/FavoriteButton";
+import ShareButton from "@/components/ShareButton";
 import DogCard from "@/components/DogCard";
 import BackToDogs from "@/components/BackToDogs";
 import DogRail from "@/components/DogRail";
@@ -107,11 +108,10 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
                 variant="overlay"
                 className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] md:hidden"
               />
-              <FavoriteButton
-                dogId={dog.id}
-                dogName={dog.name}
-                className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))]"
-              />
+              <div className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] flex gap-2">
+                <ShareButton title={`${dog.name} · RescueWalk`} text={dog.headline} />
+                <FavoriteButton dogId={dog.id} dogName={dog.name} />
+              </div>
               <NextWalk dog={dog} variant="badge" className="absolute bottom-10 left-4 md:bottom-4" />
             </div>
 

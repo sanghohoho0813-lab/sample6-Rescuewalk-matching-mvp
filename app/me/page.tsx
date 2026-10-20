@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { RotateCcw, UserRound } from "lucide-react";
-import DogCard from "@/components/DogCard";
-import DogRail from "@/components/DogRail";
+import { BookOpen, Check, ChevronRight, Home, MapPin, PawPrint, RotateCcw, UserRound } from "lucide-react";
 import Dialog from "@/components/Dialog";
+import DogImage from "@/components/DogImage";
+import FavoriteButton from "@/components/FavoriteButton";
+import NextWalk from "@/components/NextWalk";
 import EmptyState from "@/components/EmptyState";
 import { dogs, getDog } from "@/lib/data/dogs";
 import { useStore } from "@/lib/store";
@@ -77,21 +78,34 @@ export default function MyPage() {
         </nav>
       </section>
 
-      {/* 찜한 강아지 */}
-      <section id="favorites" className="mt-12 scroll-mt-24">
+      {/* 찜한 아이들 — 작은 사진 카드로 여러 마리를 한 번에 */}
+      <section id="favorites" className="mt-10 scroll-mt-24" aria-labelledby="fav-title">
         <div className="flex items-end justify-between">
-          <h2 className="text-lg font-bold text-ink-900">찜한 아이들</h2>
+          <h2 id="fav-title" className="text-lg font-bold text-ink-900">
+            찜한 아이들
+            {hydrated && favoriteDogs.length > 0 && (
+              <span className="tnum ml-1.5 text-[15px] font-normal text-ink-500">
+                {favoriteDogs.length}마리
+              </span>
+            )}
+          </h2>
           {favoriteDogs.length > 0 && (
-            <Link href="/dogs" className="text-sm font-medium text-ink-500 hover:text-ink-900">
-              더 둘러보기
+            <Link
+              href="/dogs"
+              className="flex min-h-[44px] items-center gap-0.5 text-sm font-medium text-ink-500 hover:text-ink-900"
+            >
+              더 둘러보기 <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>
           )}
         </div>
-        <div className="mt-5">
+        <div className="mt-3">
           {!hydrated ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
-              {[0, 1].map((i) => (
-                <div key={i} className="aspect-[4/3] animate-pulse rounded-[20px] bg-cream-200" />
+            <div className="flex gap-3 overflow-hidden" aria-busy="true">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="aspect-[4/5] w-[42%] shrink-0 animate-pulse rounded-[20px] bg-cream-200 sm:w-48"
+                />
               ))}
             </div>
           ) : favoriteDogs.length === 0 ? (
@@ -101,51 +115,130 @@ export default function MyPage() {
               ctaHref="/dogs"
             />
           ) : (
-            <DogRail label="찜한 아이들">
+            <ul
+              aria-label="찜한 아이들"
+              className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 lg:grid-cols-4"
+            >
               {favoriteDogs.map((dog) => (
-                <DogCard key={dog.id} dog={dog} />
+                <li
+                  key={dog.id}
+                  className="w-[42%] max-w-[190px] shrink-0 snap-start sm:w-auto sm:max-w-none"
+                >
+                  <article className="group relative">
+                    <div className="relative overflow-hidden rounded-[20px] bg-cream-200">
+                      <DogImage
+                        dog={dog}
+                        aspect="aspect-[4/5]"
+                        sizes="(max-width: 640px) 42vw, 220px"
+                        className={cn(
+                          "[&_img]:transition-transform [&_img]:duration-300 group-hover:[&_img]:scale-[1.04]",
+                          dog.availability === "unavailable" && "grayscale-[35%]"
+                        )}
+                      />
+                      <FavoriteButton
+                        dogId={dog.id}
+                        dogName={dog.name}
+                        className="absolute right-2 top-2 z-[2] h-9 w-9"
+                      />
+                    </div>
+                    <h3 className="mt-2 px-0.5">
+                      <Link
+                        href={`/dogs/${dog.id}`}
+                        className="font-bold text-ink-900 after:absolute after:inset-0 after:z-[1] focus-visible:outline-none"
+                      >
+                        {dog.name}
+                      </Link>
+                    </h3>
+                    <NextWalk
+                      dog={dog}
+                      variant="stack"
+                      className="mt-0.5 px-0.5 [&>span:last-child]:text-sm"
+                    />
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 rounded-[20px] opacity-0 ring-2 ring-sage-400 ring-offset-4 ring-offset-cream-50 group-has-[a:focus-visible]:opacity-100"
+                    />
+                  </article>
+                </li>
               ))}
-            </DogRail>
+            </ul>
           )}
         </div>
       </section>
 
-      {/* 관심 지역 */}
-      <section className="mt-12 border-t border-cream-300/70 pt-8">
-        <h2 className="text-lg font-bold text-ink-900">관심 지역</h2>
-        <p className="mt-1 text-[15px] text-ink-500">홈에서 이 지역 아이들을 먼저 보여드려요.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {REGIONS.map((region) => {
-            const active = hydrated && interestRegions.includes(region);
-            return (
-              <button
-                key={region}
-                type="button"
-                aria-pressed={active}
-                onClick={() => toggleInterestRegion(region)}
-                className={cn(
-                  "min-h-[44px] rounded-full border px-5 text-[15px] font-medium transition-colors",
-                  active
-                    ? "border-sage-600 bg-sage-600 text-white"
-                    : "border-cream-300 bg-white text-ink-700 hover:border-sage-300"
-                )}
-              >
-                {region}
-              </button>
-            );
-          })}
+      {/* 설정 — 앱의 계정 화면처럼 한 묶음의 목록 */}
+      <section className="mt-10" aria-labelledby="settings-title">
+        <h2 id="settings-title" className="text-lg font-bold text-ink-900">
+          설정과 안내
+        </h2>
+        <div className="mt-3 divide-y divide-cream-200 overflow-hidden rounded-[20px] bg-white ring-1 ring-cream-300/70">
+          <div className="p-4 sm:p-5">
+            <p className="flex items-center gap-2 text-[15px] font-semibold text-ink-900">
+              <MapPin className="h-4 w-4 text-sage-600" aria-hidden /> 관심 지역
+            </p>
+            <p className="mt-0.5 text-sm text-ink-500">홈에서 이 지역 아이들을 먼저 보여드려요.</p>
+            <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="관심 지역">
+              {REGIONS.map((region) => {
+                const active = hydrated && interestRegions.includes(region);
+                return (
+                  <button
+                    key={region}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleInterestRegion(region)}
+                    className={cn(
+                      "inline-flex min-h-[40px] items-center gap-1 rounded-full border px-4 text-[15px] font-medium transition-colors",
+                      active
+                        ? "border-sage-600 bg-sage-600 text-white"
+                        : "border-cream-300 bg-white text-ink-700 hover:border-sage-300"
+                    )}
+                  >
+                    {active && <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />}
+                    {region}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {[
+            { href: "/guide", icon: BookOpen, label: "봉사 가이드", desc: "참여 방법·준비물·현장 약속" },
+            { href: "/shelters", icon: Home, label: "함께하는 보호소", desc: "운영 시간·방문 안내" },
+            { href: "/activity", icon: PawPrint, label: "활동 기록", desc: "함께 걸은 시간과 이정표" },
+          ].map(({ href, icon: Icon, label, desc }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex min-h-[64px] items-center gap-3 px-4 py-3 transition-colors hover:bg-cream-50 sm:px-5"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cream-100 text-ink-700">
+                <Icon className="h-[18px] w-[18px]" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-ink-900">{label}</span>
+                <span className="block truncate text-[13px] text-ink-500">{desc}</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-ink-300" aria-hidden />
+            </Link>
+          ))}
+          <button
+            type="button"
+            onClick={() => setResetOpen(true)}
+            className="flex min-h-[64px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-cream-50 sm:px-5"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cream-100 text-ink-700">
+              <RotateCcw className="h-[18px] w-[18px]" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold text-ink-900">처음 상태로 되돌리기</span>
+              <span className="block text-[13px] text-ink-500">
+                데모 데이터 — 신청·기록·찜을 예시로 되돌려요
+              </span>
+            </span>
+          </button>
         </div>
-      </section>
-
-      {/* 데모 데이터 */}
-      <section className="mt-12 border-t border-cream-300/70 pt-8">
-        <h2 className="text-lg font-bold text-ink-900">데모 데이터</h2>
-        <p className="mt-1 text-[15px] leading-relaxed text-ink-500">
+        <p className="mt-3 px-1 text-[13px] leading-relaxed text-ink-500">
           신청 내역·활동 기록·찜은 이 브라우저에만 저장돼요. 실제 보호소 예약과는 연결되지 않아요.
         </p>
-        <button type="button" onClick={() => setResetOpen(true)} className="btn-secondary mt-4">
-          <RotateCcw className="h-4 w-4" /> 처음 상태로 되돌리기
-        </button>
       </section>
 
       <Dialog

@@ -41,6 +41,17 @@ describe("활동 영향", () => {
     expect(byId["ten-hours"].progress(impact)).toBe("2/10시간");
   });
 
+  it("진행 막대는 0~1, 닿은 이정표는 정확히 1", () => {
+    const byId = Object.fromEntries(MILESTONES.map((m) => [m.id, m]));
+    expect(byId["five-friends"].ratio(impact)).toBeCloseTo(3 / 5);
+    for (const m of MILESTONES) {
+      const r = m.ratio(impact);
+      expect(r).toBeGreaterThanOrEqual(0);
+      expect(r).toBeLessThanOrEqual(1);
+      expect(r === 1).toBe(m.achieved(impact));
+    }
+  });
+
   it("기록이 없으면 0", () => {
     expect(computeImpact([], shelterOf, "2026-10-13")).toMatchObject({
       totalWalks: 0,

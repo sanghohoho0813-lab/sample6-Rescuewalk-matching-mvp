@@ -88,6 +88,7 @@ export const MILESTONES: Milestone[] = [
     label: "첫 산책",
     description: "처음으로 아이와 함께 걸었어요",
     achieved: (s) => s.totalWalks >= 1,
+    ratio: (s) => Math.min(s.totalWalks / 1, 1),
     progress: (s) => `${Math.min(s.totalWalks, 1)}/1회`,
   },
   {
@@ -95,6 +96,7 @@ export const MILESTONES: Milestone[] = [
     label: "다시 만난 친구",
     description: "같은 아이를 두 번 이상 만났어요 — 아이에게 익숙한 사람이 생겼어요",
     achieved: (s) => s.revisitedDogs >= 1,
+    ratio: (s) => Math.min(s.revisitedDogs / 1, 1),
     progress: (s) => `${Math.min(s.revisitedDogs, 1)}/1마리`,
   },
   {
@@ -102,6 +104,7 @@ export const MILESTONES: Milestone[] = [
     label: "3회 참여",
     description: "산책 봉사 3회를 함께했어요",
     achieved: (s) => s.totalWalks >= 3,
+    ratio: (s) => Math.min(s.totalWalks / 3, 1),
     progress: (s) => `${Math.min(s.totalWalks, 3)}/3회`,
   },
   {
@@ -109,6 +112,7 @@ export const MILESTONES: Milestone[] = [
     label: "5마리 친구",
     description: "다섯 아이와 인연을 맺었어요",
     achieved: (s) => s.uniqueDogs >= 5,
+    ratio: (s) => Math.min(s.uniqueDogs / 5, 1),
     progress: (s) => `${Math.min(s.uniqueDogs, 5)}/5마리`,
   },
   {
@@ -116,6 +120,7 @@ export const MILESTONES: Milestone[] = [
     label: "누적 10시간",
     description: "함께 걸은 시간이 10시간을 넘었어요",
     achieved: (s) => s.totalMinutes >= 600,
+    ratio: (s) => Math.min(s.totalMinutes / 600, 1),
     progress: (s) => `${Math.floor(Math.min(s.totalMinutes, 600) / 60)}/10시간`,
   },
   {
@@ -123,6 +128,7 @@ export const MILESTONES: Milestone[] = [
     label: "10회 참여",
     description: "산책 봉사 10회를 함께했어요",
     achieved: (s) => s.totalWalks >= 10,
+    ratio: (s) => Math.min(s.totalWalks / 10, 1),
     progress: (s) => `${Math.min(s.totalWalks, 10)}/10회`,
   },
 ];

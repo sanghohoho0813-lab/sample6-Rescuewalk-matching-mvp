@@ -3,13 +3,13 @@
 import { Suspense, useEffect, useRef } from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Loader2 } from "lucide-react";
 import Stepper from "@/components/Stepper";
 import { DogFace } from "@/components/DogImage";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { LAST_STEP, STEP_LABELS } from "@/lib/domain/apply";
-import { withJosa } from "@/lib/utils";
+import { cn, formatDateKo, formatTimeKo, withJosa } from "@/lib/utils";
 import { useApplyFlow } from "./useApplyFlow";
 import { AppliedNotice, ApplySummary, InfoStep, ReviewStep, ScheduleStep, type InfoFieldRefs } from "./steps";
 
@@ -24,6 +24,14 @@ function ApplyFlowPage() {
   const flow = useApplyFlow(dog);
   const fieldRefs: InfoFieldRefs = useRef({});
   const firstStepRender = useRef(true);
+  // 단계가 앞으로 갔는지 뒤로 갔는지 — 전환 방향을 맞춰 '어디로 이동했는지'를 몸으로 느끼게.
+  // 단계가 바뀐 그 순간에만 방향을 정해 두어, 입력 중 다시 그려져도 애니메이션이 바뀌지 않게 합니다.
+  const lastStep = useRef(flow.step);
+  const direction = useRef<"next" | "prev">("next");
+  if (flow.step !== lastStep.current) {
+    direction.current = flow.step > lastStep.current ? "next" : "prev";
+    lastStep.current = flow.step;
+  }
 
   // 단계가 바뀌면 새 단계 제목으로 포커스를 옮겨, 키보드·스크린리더 사용자가 처음부터 읽게 합니다
   useEffect(() => {
@@ -92,6 +100,22 @@ function ApplyFlowPage() {
             <Stepper steps={[...STEP_LABELS]} current={step} />
           </div>
 
+          {/* 정보 단계에서도 고른 일정이 보이게(모바일 — PC 는 오른쪽 요약에) */}
+          {restored && step === 1 && flow.draft.date && flow.draft.time && (
+            <button
+              type="button"
+              onClick={() => flow.goTo(0)}
+              className="mt-5 flex w-full items-center gap-3 rounded-2xl bg-sage-50 px-4 py-3 text-left ring-1 ring-sage-100 transition-colors hover:bg-sage-100 lg:hidden"
+              aria-label={`고른 일정 ${formatDateKo(flow.draft.date)} ${formatTimeKo(flow.draft.time)}, 일정 변경`}
+            >
+              <CalendarCheck className="h-5 w-5 shrink-0 text-sage-700" aria-hidden />
+              <span className="tnum min-w-0 flex-1 text-[15px] font-semibold text-ink-900">
+                {formatDateKo(flow.draft.date)} {formatTimeKo(flow.draft.time)}
+              </span>
+              <span className="shrink-0 text-sm font-medium text-sage-700">변경</span>
+            </button>
+          )}
+
           {!restored ? (
             <div className="mt-8 space-y-4" aria-busy="true" aria-label="신청서를 불러오는 중">
               <div className="h-7 w-48 animate-pulse rounded-lg bg-cream-200" />
@@ -99,7 +123,13 @@ function ApplyFlowPage() {
               <div className="mt-5 h-40 animate-pulse rounded-2xl bg-cream-200" />
             </div>
           ) : (
-            <div key={step} className="mt-8 animate-fade-up motion-reduce:animate-none">
+            <div
+              key={step}
+              className={cn(
+                "mt-8 motion-reduce:animate-none",
+                direction.current === "next" ? "animate-step-next" : "animate-step-prev"
+              )}
+            >
               {step === 0 && <ScheduleStep flow={flow} dog={dog} shelter={shelter} />}
               {step === 1 && <InfoStep flow={flow} dog={dog} fieldRefs={fieldRefs} />}
               {step === 2 && <ReviewStep flow={flow} dog={dog} shelter={shelter} />}

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { CalendarPlus, Check } from "lucide-react";
 import { DogFace } from "@/components/DogImage";
 import EmptyState from "@/components/EmptyState";
 import VisitStages from "@/components/VisitStages";
@@ -11,12 +11,13 @@ import { ARRIVE_EARLY_MIN, COMMON_BRING, PROVIDED } from "@/lib/visitGuide";
 import { getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { useStore } from "@/lib/store";
+import { buildIcs, downloadIcs, visitEvent } from "@/lib/calendar";
 import { formatDateFullKo, formatTimeKo, withJosa } from "@/lib/utils";
 
 export default function CompletePage() {
   const params = useParams<{ rid: string }>();
   const router = useRouter();
-  const { requests, hydrated } = useStore();
+  const { requests, hydrated, showToast } = useStore();
   const request = requests.find((r) => r.id === params.rid);
 
   // 신청 직후가 아닌(승인·완료·취소된) 신청이라면 축하 화면 대신 상세로 보냅니다
@@ -128,9 +129,26 @@ export default function CompletePage() {
         {PROVIDED}
       </p>
 
-      <Link href={`/requests/${request.id}`} className="btn-primary btn-lg mt-8 w-full">
-        내 신청 확인하기
-      </Link>
+      <div className="mt-8 grid gap-2.5">
+        <Link href={`/requests/${request.id}`} className="btn-primary btn-lg w-full">
+          내 신청 확인하기
+        </Link>
+        {shelter && (
+          <button
+            type="button"
+            onClick={() => {
+              downloadIcs(
+                `rescuewalk-${request.reservationNo}.ics`,
+                buildIcs(visitEvent(request, dog, shelter))
+              );
+              showToast("캘린더 파일을 받았어요. 승인되면 문자로도 알려드려요");
+            }}
+            className="btn-secondary btn-lg w-full"
+          >
+            <CalendarPlus className="h-4 w-4" aria-hidden /> 캘린더에 추가
+          </button>
+        )}
+      </div>
       <Link
         href="/dogs"
         className="mt-2 flex min-h-[44px] items-center justify-center text-[15px] font-medium text-ink-500 hover:text-ink-900"

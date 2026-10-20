@@ -12,6 +12,7 @@ export default function DateCell({
   sub,
   state,
   topClassName,
+  compact = false,
   className,
   ...button
 }: {
@@ -21,13 +22,16 @@ export default function DateCell({
   state: "selected" | "open" | "off";
   /** 요일 글자색(주말 등) — 고르지 않은 열린 날에만 */
   topClassName?: string;
+  /** 좁은 자리(PC 옆 패널): 아래 글자 대신 점 하나 — 자세한 내용은 읽는 이름(aria-label)에 */
+  compact?: boolean;
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">) {
   return (
     <button
       type="button"
       disabled={state === "off"}
       className={cn(
-        "flex min-h-[64px] w-full flex-col items-center justify-center rounded-xl border px-0.5 transition-[background-color,border-color,box-shadow] duration-150",
+        compact ? "min-h-[58px]" : "min-h-[64px]",
+        "flex w-full flex-col items-center justify-center rounded-xl border px-0.5 transition-[background-color,border-color,box-shadow] duration-150",
         state === "selected" &&
           "border-sage-600 bg-sage-600 text-white shadow-[0_4px_12px_rgba(90,122,64,0.28)]",
         state === "open" && "border-cream-300 bg-white hover:border-sage-400 active:bg-sage-50",
@@ -56,14 +60,24 @@ export default function DateCell({
       >
         {day}
       </span>
-      <span
-        className={cn(
-          "mt-0.5 whitespace-nowrap text-[13px] leading-tight tracking-tight",
-          state === "selected" ? "text-white" : state === "off" ? "text-ink-400" : "text-sage-700"
-        )}
-      >
-        {sub}
-      </span>
+      {compact ? (
+        <span
+          aria-hidden
+          className={cn(
+            "mt-1.5 h-1.5 w-1.5 rounded-full",
+            state === "selected" ? "bg-white" : state === "open" ? "bg-sage-500" : "bg-transparent"
+          )}
+        />
+      ) : (
+        <span
+          className={cn(
+            "mt-0.5 whitespace-nowrap text-[13px] leading-tight tracking-tight",
+            state === "selected" ? "text-white" : state === "off" ? "text-ink-400" : "text-sage-700"
+          )}
+        >
+          {sub}
+        </span>
+      )}
     </button>
   );
 }

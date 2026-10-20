@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type MutableRefObject, type ReactNode } from "react";
+import { useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import Link from "next/link";
 import { AlertCircle, AlertTriangle, Check, MapPin } from "lucide-react";
 import DateCell from "@/components/DateCell";
@@ -148,6 +148,18 @@ export function ScheduleStep({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog
   );
 }
 
+/** 형식이 맞으면 칸 오른쪽에 작은 확인 표시 */
+function ValidMark() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute right-3.5 top-1/2 flex h-6 w-6 -translate-y-1/2 animate-pop-in items-center justify-center rounded-full bg-sage-100 text-sage-700 motion-reduce:animate-none"
+    >
+      <Check className="h-3.5 w-3.5" strokeWidth={3} />
+    </span>
+  );
+}
+
 function FieldError({ id, children }: { id: string; children?: string }) {
   if (!children) return null;
   return (
@@ -168,7 +180,13 @@ export type InfoFieldRefs = MutableRefObject<{
 /** 2단계 — 보호소가 실제로 쓰는 정보만, 왜 필요한지와 함께 */
 export function InfoStep({ flow, dog, fieldRefs }: { flow: ApplyFlow; dog: Dog; fieldRefs: InfoFieldRefs }) {
   const { draft, update, errors, showErrors, gate } = flow;
-  const err = showErrors ? errors : {};
+  // 칸을 떠날 때 바로 알려줍니다(‘다음’을 눌러 보고서야 아는 대신). 입력 중에는 방해하지 않음
+  const [touched, setTouched] = useState<{ name?: boolean; phone?: boolean }>({});
+  const err: typeof errors = showErrors
+    ? errors
+    : { name: touched.name ? errors.name : undefined, phone: touched.phone ? errors.phone : undefined };
+  const okName = (touched.name || showErrors) && !errors.name && draft.name.trim() !== "";
+  const okPhone = (touched.phone || showErrors) && !errors.phone && draft.phone.trim() !== "";
   const refs = fieldRefs.current;
   // 경험 제한은 고르는 즉시 알려줍니다(다음을 눌러 보고 나서야 알면 늦으니까)
   const expError = err.experienced ?? (gate === "block" ? errors.experienced : undefined);
@@ -183,20 +201,24 @@ export function InfoStep({ flow, dog, fieldRefs }: { flow: ApplyFlow; dog: Dog; 
           <label htmlFor="f-name" className="mb-1.5 block text-sm font-semibold text-ink-700">
             이름
           </label>
-          <input
-            id="f-name"
-            ref={(el) => {
-              refs.name = el;
-            }}
-            value={draft.name}
-            onChange={(e) => update({ name: e.target.value })}
-            maxLength={NAME_MAX}
-            autoComplete="name"
-            enterKeyHint="next"
-            aria-invalid={!!err.name}
-            aria-describedby={err.name ? "e-name" : "w-name"}
-            className={cn("input-field", err.name && "input-error")}
-          />
+          <div className="relative">
+            <input
+              id="f-name"
+              ref={(el) => {
+                refs.name = el;
+              }}
+              value={draft.name}
+              onChange={(e) => update({ name: e.target.value })}
+              onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+              maxLength={NAME_MAX}
+              autoComplete="name"
+              enterKeyHint="next"
+              aria-invalid={!!err.name}
+              aria-describedby={err.name ? "e-name" : "w-name"}
+              className={cn("input-field pr-11", err.name && "input-error")}
+            />
+            {okName && <ValidMark />}
+          </div>
           <FieldError id="e-name">{err.name}</FieldError>
           {!err.name && (
             <Why>
@@ -208,22 +230,26 @@ export function InfoStep({ flow, dog, fieldRefs }: { flow: ApplyFlow; dog: Dog; 
           <label htmlFor="f-phone" className="mb-1.5 block text-sm font-semibold text-ink-700">
             연락처
           </label>
-          <input
-            id="f-phone"
-            ref={(el) => {
-              refs.phone = el;
-            }}
-            type="tel"
-            value={draft.phone}
-            onChange={(e) => update({ phone: formatPhone(e.target.value) })}
-            inputMode="tel"
-            autoComplete="tel-national"
-            enterKeyHint="done"
-            placeholder="010-0000-0000"
-            aria-invalid={!!err.phone}
-            aria-describedby={err.phone ? "e-phone" : "w-phone"}
-            className={cn("input-field tnum", err.phone && "input-error")}
-          />
+          <div className="relative">
+            <input
+              id="f-phone"
+              ref={(el) => {
+                refs.phone = el;
+              }}
+              type="tel"
+              value={draft.phone}
+              onChange={(e) => update({ phone: formatPhone(e.target.value) })}
+              onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+              inputMode="tel"
+              autoComplete="tel-national"
+              enterKeyHint="done"
+              placeholder="010-0000-0000"
+              aria-invalid={!!err.phone}
+              aria-describedby={err.phone ? "e-phone" : "w-phone"}
+              className={cn("input-field tnum pr-11", err.phone && "input-error")}
+            />
+            {okPhone && <ValidMark />}
+          </div>
           <FieldError id="e-phone">{err.phone}</FieldError>
           {!err.phone && (
             <Why>

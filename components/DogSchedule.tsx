@@ -79,6 +79,7 @@ export default function DogSchedule({ dog, compact = false }: { dog: Dog; compac
                 topClassName={WEEKDAY_TONE[wd]}
                 day={day}
                 sub={off ?? `${d.open.length}타임`}
+                compact={compact}
                 onClick={() => setPicked(d.date)}
                 aria-pressed={isSel}
                 aria-label={`${m}월 ${day}일 ${DAY[wd]}요일 ${open ? `${d.open.length}개 시간 가능` : off === "휴무" ? "보호소 휴무" : off === "마감" ? "신청 마감" : "산책하지 않는 날"}`}

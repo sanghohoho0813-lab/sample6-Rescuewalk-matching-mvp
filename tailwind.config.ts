@@ -107,6 +107,20 @@ const config: Config = {
           "0%": { transform: "translateY(100%)" },
           "100%": { transform: "translateY(0)" },
         },
+        /** 신청 단계 전환 — 앞으로 가면 오른쪽에서, 뒤로 가면 왼쪽에서 들어옴 */
+        "step-next": {
+          "0%": { opacity: "0", transform: "translateX(28px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "step-prev": {
+          "0%": { opacity: "0", transform: "translateX(-28px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        /** 화면 이동 시 본문이 부드럽게 나타남(채우기 없이 — 끝나면 흔적을 남기지 않음) */
+        "page-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
         /** 찜할 때 하트가 한 번 튀어 오르는 피드백(끝은 활성 상태 크기 1.1과 같게) */
         "heart-pop": {
           "0%": { transform: "scale(1)" },
@@ -141,6 +155,9 @@ const config: Config = {
         "pop-in": "pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
         "slide-up": "slide-up 0.28s ease-out both",
         "heart-pop": "heart-pop 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
+        "step-next": "step-next 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
+        "step-prev": "step-prev 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
+        "page-in": "page-in 0.24s ease-out",
         wag: "wag 1s ease-in-out infinite",
         "light-sweep": "light-sweep 6s ease-in-out infinite",
         "soft-pulse": "soft-pulse 3.2s ease-in-out infinite",

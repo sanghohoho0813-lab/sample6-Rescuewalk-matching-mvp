@@ -28,10 +28,16 @@ export default function FavoriteButton({
         e.preventDefault();
         e.stopPropagation();
         toggleFavorite(dogId);
-        if (!active) setPop((n) => n + 1);
-        showToast(
-          active ? `${withJosa(dogName, "를")} 찜 목록에서 뺐어요` : `${withJosa(dogName, "를")} 찜했어요`
-        );
+        if (active) {
+          // 빼는 건 실수일 수 있으니 확인 창 대신 바로 되돌릴 수 있게
+          showToast(`${withJosa(dogName, "를")} 찜 목록에서 뺐어요`, {
+            label: "되돌리기",
+            onClick: () => toggleFavorite(dogId),
+          });
+        } else {
+          setPop((n) => n + 1);
+          showToast(`${withJosa(dogName, "를")} 찜했어요`);
+        }
       }}
       className={cn(
         "flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-card backdrop-blur transition-all duration-200 hover:scale-110 active:scale-95",

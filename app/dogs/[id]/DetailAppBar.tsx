@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import BackToDogs from "@/components/BackToDogs";
 import FavoriteButton from "@/components/FavoriteButton";
+import ShareButton from "@/components/ShareButton";
 import { DogFace } from "@/components/DogImage";
 import { cn } from "@/lib/utils";
 import type { Dog } from "@/lib/types";
@@ -77,6 +78,11 @@ export default function DetailAppBar({ dog, sections }: { dog: Dog; sections: Se
           <DogFace dog={dog} sizes="32px" />
         </span>
         <p className="min-w-0 flex-1 truncate text-[17px] font-bold text-ink-900">{dog.name}</p>
+        <ShareButton
+          title={`${dog.name} · RescueWalk`}
+          text={dog.headline}
+          className="!bg-transparent !shadow-none"
+        />
         <FavoriteButton dogId={dog.id} dogName={dog.name} className="!bg-transparent !shadow-none" />
       </div>
       <nav aria-label={`${dog.name} 소개 목차`}>

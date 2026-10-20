@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,7 +21,12 @@ const FOCUSABLE =
  * - 열려 있는 동안 body 스크롤 잠금 + Tab 포커스가 시트 밖으로 나가지 않음
  * - Esc / 배경 클릭으로 닫기 (busy 중에는 막음), 닫히면 원래 요소로 포커스 복귀
  * - body[data-modal-open] 표시 → 화면에 떠 있는 공용 버튼(뒤로·앞으로)이 시트를 가리지 않게 숨김
+ * - 모바일 바텀시트는 머리 부분을 아래로 끌어내려 닫을 수 있음(조금만 끌면 제자리로)
  */
+
+/** 이만큼 끌어내리거나, 이 속도(px/ms)보다 빠르게 쓸어내리면 닫힘 */
+const DISMISS_DISTANCE = 110;
+const DISMISS_VELOCITY = 0.6;
 export default function Dialog({
   open,
   onClose,
@@ -42,6 +54,32 @@ export default function Dialog({
   const busyRef = useRef(busy);
   closeRef.current = onClose;
   busyRef.current = busy;
+
+  // 끌어내려 닫기 — 시트 머리(손잡이·제목)에서 시작한 세로 끌기만
+  const [dragY, setDragY] = useState(0);
+  const drag = useRef<{ y: number; t: number } | null>(null);
+  const onDragStart = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (busyRef.current || window.matchMedia("(min-width: 640px)").matches) return;
+    if ((e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
+    drag.current = { y: e.clientY, t: performance.now() };
+    try {
+      // 손가락이 머리 밖으로 나가도 계속 따라오도록
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* 포인터 잡기를 지원하지 않아도 끌기는 동작 */
+    }
+  };
+  const onDragMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (drag.current) setDragY(Math.max(0, e.clientY - drag.current.y));
+  };
+  const onDragEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    const dy = e.clientY - drag.current.y;
+    const v = dy / Math.max(1, performance.now() - drag.current.t);
+    drag.current = null;
+    setDragY(0);
+    if (dy > DISMISS_DISTANCE || (dy > 24 && v > DISMISS_VELOCITY)) closeRef.current();
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -81,6 +119,10 @@ export default function Dialog({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) setDragY(0);
+  }, [open]);
+
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
@@ -91,44 +133,60 @@ export default function Dialog({
         tabIndex={-1}
         onClick={() => !busy && onClose()}
         className="absolute inset-0 animate-fade-in bg-ink-900/45 motion-reduce:animate-none"
+        style={dragY ? { opacity: Math.max(0.3, 1 - dragY / 400) } : undefined}
       />
+      {/* 끌기 이동은 바깥 틀에(시트 자체의 등장 애니메이션과 겹치지 않게) */}
       <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description ? descId : undefined}
-        tabIndex={-1}
-        className={cn(
-          "relative flex max-h-[90dvh] w-full animate-slide-up flex-col rounded-t-3xl bg-cream-50 outline-none sm:max-w-md sm:animate-fade-up sm:rounded-3xl motion-reduce:animate-none",
-          className
-        )}
+        className="relative flex w-full justify-center"
+        style={{
+          transform: dragY ? `translateY(${dragY}px)` : undefined,
+          transition: drag.current ? "none" : "transform 0.22s ease-out",
+        }}
       >
-        <div className="shrink-0 px-5 pt-3 sm:px-6 sm:pt-6">
-          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-cream-300 sm:hidden" aria-hidden />
-          <div className="flex items-start justify-between gap-4">
-            <h2 id={titleId} className="text-lg font-bold text-ink-900">
-              {title}
-            </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={busy}
-              aria-label="닫기"
-              className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-cream-200 hover:text-ink-700 disabled:opacity-40"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          {description && (
-            <p id={descId} className="mt-1 text-[15px] leading-relaxed text-ink-500">
-              {description}
-            </p>
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={description ? descId : undefined}
+          tabIndex={-1}
+          className={cn(
+            "relative flex max-h-[90dvh] w-full animate-slide-up flex-col rounded-t-3xl bg-cream-50 outline-none sm:max-w-md sm:animate-fade-up sm:rounded-3xl motion-reduce:animate-none",
+            className
           )}
-        </div>
-        {children && <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5 sm:px-6">{children}</div>}
-        <div className="flex shrink-0 gap-2.5 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-6 sm:pb-6">
-          {footer}
+        >
+          <div
+            className="shrink-0 touch-none px-5 pt-3 sm:touch-auto sm:px-6 sm:pt-6"
+            onPointerDown={onDragStart}
+            onPointerMove={onDragMove}
+            onPointerUp={onDragEnd}
+            onPointerCancel={onDragEnd}
+          >
+            <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-cream-300 sm:hidden" aria-hidden />
+            <div className="flex items-start justify-between gap-4">
+              <h2 id={titleId} className="text-lg font-bold text-ink-900">
+                {title}
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={busy}
+                aria-label="닫기"
+                className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-cream-200 hover:text-ink-700 disabled:opacity-40"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {description && (
+              <p id={descId} className="mt-1 text-[15px] leading-relaxed text-ink-500">
+                {description}
+              </p>
+            )}
+          </div>
+          {children && <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5 sm:px-6">{children}</div>}
+          <div className="flex shrink-0 gap-2.5 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-6 sm:pb-6">
+            {footer}
+          </div>
         </div>
       </div>
     </div>,

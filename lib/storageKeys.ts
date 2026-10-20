@@ -33,3 +33,24 @@ export const safeSession = {
     }
   },
 };
+
+/** 신청별 준비물 체크 — 이 브라우저에서만 기억(신청 데이터와 따로 두어 저장 형식을 바꾸지 않음) */
+export const prepKey = (requestId: string) => `rw:prep:${requestId}`;
+
+/** localStorage 를 막힌 환경에서도 멈추지 않게 */
+export const safeLocal = {
+  get(key: string): string | null {
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  set(key: string, value: string): void {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      /* 저장하지 못해도 화면은 계속 동작 */
+    }
+  },
+};

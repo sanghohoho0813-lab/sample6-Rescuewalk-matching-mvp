@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import SectionNav from "@/components/SectionNav";
 import { Check, ChevronDown } from "lucide-react";
 
 export const metadata = { title: "봉사 가이드" };
@@ -87,29 +88,22 @@ const FAQS = [
 export default function GuidePage() {
   return (
     <div className="container-app max-w-4xl py-8 md:py-10">
-      <header className="mb-10">
+      <header className="mb-5">
         <h1 className="page-title">봉사 가이드</h1>
         <p className="mt-1.5 text-[15px] text-ink-500">처음 봉사하셔도 괜찮아요. 차근차근 안내해드릴게요.</p>
-        <nav aria-label="가이드 목차" className="mt-5 flex flex-wrap gap-2">
-          {[
-            { href: "#start", label: "참여 방법" },
-            { href: "#prepare", label: "준비물" },
-            { href: "#rules", label: "현장 약속" },
-            { href: "#faq", label: "자주 묻는 질문" },
-          ].map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="inline-flex min-h-[40px] items-center rounded-full border border-cream-300 bg-white px-4 text-[15px] text-ink-700 hover:border-sage-300"
-            >
-              {l.label}
-            </a>
-          ))}
-        </nav>
       </header>
+      <SectionNav
+        label="가이드 목차"
+        items={[
+          { id: "start", label: "참여 방법" },
+          { id: "prepare", label: "준비물" },
+          { id: "rules", label: "현장 약속" },
+          { id: "faq", label: "자주 묻는 질문" },
+        ]}
+      />
 
       {/* 처음 참여하는 법 */}
-      <section id="start" className="scroll-mt-24">
+      <section id="start" className="mt-8 scroll-mt-36">
         <h2 className="section-title">처음 참여하는 법</h2>
         <ol className="mt-6 grid gap-x-8 gap-y-10 sm:grid-cols-2">
           {START_STEPS.map(({ title, desc, image, alt }, i) => (
@@ -142,7 +136,7 @@ export default function GuidePage() {
       </section>
 
       {/* 준비물 & 복장 */}
-      <section id="prepare" className="mt-16 scroll-mt-24">
+      <section id="prepare" className="mt-16 scroll-mt-36">
         <h2 className="section-title">준비물과 복장</h2>
         <div className="mt-6 grid gap-x-6 gap-y-8 sm:grid-cols-3">
           {PREPARATIONS.map(({ title, desc, image, alt }) => (
@@ -164,7 +158,7 @@ export default function GuidePage() {
       </section>
 
       {/* 현장 행동 가이드 */}
-      <section id="rules" className="mt-16 scroll-mt-24">
+      <section id="rules" className="mt-16 scroll-mt-36">
         <h2 className="section-title">산책할 때 이것만은 지켜주세요</h2>
         <ul className="mt-5 divide-y divide-cream-200 border-y border-cream-200">
           {FIELD_RULES.map((rule) => (
@@ -177,7 +171,7 @@ export default function GuidePage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="mt-16 scroll-mt-24">
+      <section id="faq" className="mt-16 scroll-mt-36">
         <h2 className="section-title">자주 묻는 질문</h2>
         <div className="mt-5 divide-y divide-cream-200 border-y border-cream-200">
           {FAQS.map((faq) => (

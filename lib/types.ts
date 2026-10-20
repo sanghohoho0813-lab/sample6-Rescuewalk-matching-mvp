@@ -165,6 +165,8 @@ export interface Milestone {
   achieved: (stats: ActivityStats) => boolean;
   /** 아직 닿지 않은 이정표에 보여줄 진행도 (예: "4/5마리") */
   progress: (stats: ActivityStats) => string;
+  /** 진행 막대용 0~1 */
+  ratio: (stats: ActivityStats) => number;
 }
 
 export interface ActivityStats {

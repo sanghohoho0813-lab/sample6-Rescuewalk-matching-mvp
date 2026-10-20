@@ -4,7 +4,7 @@ import { Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Check, CheckCircle2, ChevronRight, PawPrint, Repeat } from "lucide-react";
-import { DogFace } from "@/components/DogImage";
+import DogImage, { DogFace } from "@/components/DogImage";
 import EmptyState from "@/components/EmptyState";
 import MyWalkTabs from "@/components/MyWalkTabs";
 import { getDog } from "@/lib/data/dogs";
@@ -60,6 +60,20 @@ function ActivityContent() {
         ctaHref="/dogs?need=beginner"
       />
     );
+  }
+
+  // 일지는 달마다 묶어(최근 달부터) 기간의 흐름이 보이게
+  const months: { key: string; label: string; minutes: number; logs: typeof logs }[] = [];
+  for (const log of logs) {
+    const key = log.date.slice(0, 7);
+    let g = months.find((m) => m.key === key);
+    if (!g) {
+      const [y, mo] = key.split("-").map(Number);
+      g = { key, label: `${y}년 ${mo}월`, minutes: 0, logs: [] };
+      months.push(g);
+    }
+    g.logs.push(log);
+    g.minutes += log.durationMin;
   }
 
   const newDog = newLog ? getDog(newLog.dogId) : undefined;
@@ -165,72 +179,91 @@ function ActivityContent() {
         </p>
       )}
 
-      {/* 아이별 관계 */}
-      <section className="mt-10">
-        <h2 className="text-lg font-bold text-ink-900">함께 걸은 아이들</h2>
-        <ul className="mt-3 divide-y divide-cream-200 border-y border-cream-200">
+      {/* 아이별 관계 — 숫자 목록이 아니라 '함께 걸은 아이들'의 얼굴 */}
+      <section className="mt-10" aria-labelledby="bonds-title">
+        <h2 id="bonds-title" className="text-lg font-bold text-ink-900">
+          함께 걸은 아이들{" "}
+          <span className="tnum ml-1 text-[15px] font-normal text-ink-500">{impact.uniqueDogs}마리</span>
+        </h2>
+        <ul className="no-scrollbar -mx-4 mt-3 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0">
           {impact.bonds.map((b) => {
             const dog = getDog(b.dogId);
             if (!dog) return null;
             const available = dog.availability === "available";
             return (
-              <li key={b.dogId} className="flex items-center gap-4 py-3.5">
-                <Link href={`/dogs/${dog.id}`} className="flex min-w-0 flex-1 items-center gap-4">
-                  <span className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl">
-                    <DogFace dog={dog} sizes="48px" />
+              <li
+                key={b.dogId}
+                className="flex w-[46%] max-w-[200px] shrink-0 snap-start flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-cream-300/70 sm:w-auto sm:max-w-none"
+              >
+                <Link href={`/dogs/${dog.id}`} className="group block">
+                  <span className="relative block overflow-hidden">
+                    <DogImage
+                      dog={dog}
+                      aspect="aspect-[4/3]"
+                      sizes="(max-width: 640px) 46vw, 240px"
+                      className="[&_img]:transition-transform [&_img]:duration-300 group-hover:[&_img]:scale-[1.04]"
+                    />
+                    {b.walks > 1 && (
+                      <span className="chip absolute left-2 top-2 bg-white/95 font-semibold text-sage-800 shadow-card">
+                        <Repeat className="h-3 w-3" aria-hidden /> 다시 만난 친구
+                      </span>
+                    )}
                   </span>
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-2">
-                      <span className="font-bold text-ink-900">{dog.name}</span>
-                      {b.walks > 1 && (
-                        <span className="chip bg-sage-100 text-sage-800">
-                          <Repeat className="h-3 w-3" aria-hidden /> 다시 만난 친구
-                        </span>
-                      )}
+                  <span className="block px-3 pt-2.5">
+                    <span className="block font-bold text-ink-900 group-hover:text-sage-700">{dog.name}</span>
+                    <span className="tnum block text-sm text-ink-700">
+                      {b.walks}번 · {formatDuration(b.minutes)}
                     </span>
-                    <span className="mt-0.5 block text-sm text-ink-500">
-                      <span className="tnum">{b.walks}번</span> ·{" "}
-                      <span className="tnum">{formatDuration(b.minutes)}</span>
-                      <span className="tnum block text-[13px]">마지막 {formatDateKo(b.lastDate)}</span>
+                    <span className="tnum block text-[13px] text-ink-500">
+                      마지막 {formatDateKo(b.lastDate)}
                     </span>
                   </span>
                 </Link>
-                {available && (
-                  <Link
-                    href={`/dogs/${dog.id}/apply`}
-                    className="inline-flex min-h-[40px] shrink-0 items-center gap-0.5 rounded-full border border-cream-300 bg-white px-3.5 text-sm font-semibold text-ink-900 hover:border-sage-400"
-                    aria-label={`${withJosa(dog.name, "와")} 다시 산책하기`}
-                  >
-                    다시 산책 <ChevronRight className="h-4 w-4" aria-hidden />
-                  </Link>
-                )}
+                <div className="mt-auto p-3 pt-2.5">
+                  {available ? (
+                    <Link
+                      href={`/dogs/${dog.id}/apply`}
+                      className="flex min-h-[40px] items-center justify-center gap-0.5 rounded-full border border-cream-300 bg-white text-sm font-semibold text-ink-900 transition-colors hover:border-sage-400 hover:bg-sage-50"
+                      aria-label={`${withJosa(dog.name, "와")} 다시 산책하기`}
+                    >
+                      다시 산책 <ChevronRight className="h-4 w-4" aria-hidden />
+                    </Link>
+                  ) : (
+                    <p className="flex min-h-[40px] items-center justify-center text-[13px] text-ink-500">
+                      지금은 쉬는 중
+                    </p>
+                  )}
+                </div>
               </li>
             );
           })}
         </ul>
       </section>
 
-      {/* 이정표 — 게임 점수가 아니라 기준선 */}
-      <section className="mt-10">
-        <h2 className="text-lg font-bold text-ink-900">이정표</h2>
+      {/* 이정표 — 게임 점수가 아니라 기준선. 얼마나 남았는지 막대로 */}
+      <section className="mt-10" aria-labelledby="milestones-title">
+        <h2 id="milestones-title" className="text-lg font-bold text-ink-900">
+          이정표
+        </h2>
         <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
           {MILESTONES.map((m) => {
             const done = m.achieved(impact);
             const fresh = reached.some((r) => r.id === m.id);
+            const pct = Math.round(m.ratio(impact) * 100);
             return (
               <li
                 key={m.id}
                 className={cn(
-                  "rounded-2xl px-4 py-3",
+                  "rounded-2xl px-4 pb-3.5 pt-3",
                   done ? "bg-white ring-1 ring-sage-200" : "bg-cream-100",
-                  fresh && "ring-2 ring-sage-500"
+                  fresh && "animate-pop-in ring-2 ring-sage-500 motion-reduce:animate-none"
                 )}
                 title={m.description}
               >
                 <p
                   className={cn(
                     "flex items-center gap-1.5 text-[15px] font-semibold",
-                    done ? "text-ink-900" : "text-ink-500"
+                    done ? "text-ink-900" : "text-ink-700"
                   )}
                 >
                   {done && <Check className="h-4 w-4 text-sage-600" strokeWidth={3} aria-hidden />}
@@ -239,64 +272,107 @@ function ActivityContent() {
                 <p className="tnum mt-0.5 text-[13px] text-ink-500">
                   {done ? "닿았어요" : m.progress(impact)}
                 </p>
+                <div
+                  role="progressbar"
+                  aria-label={`${m.label} 진행`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={pct}
+                  className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-cream-200"
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-[width] duration-700 ease-out",
+                      done ? "bg-sage-500" : "bg-sage-400"
+                    )}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
               </li>
             );
           })}
         </ul>
       </section>
 
-      {/* 산책 일지 */}
-      <section className="mt-10">
-        <h2 className="text-lg font-bold text-ink-900">산책 일지</h2>
-        <ul className="mt-3 divide-y divide-cream-200 border-y border-cream-200">
-          {logs.map((log) => {
-            const dog = getDog(log.dogId);
-            if (!dog) return null;
-            const shelter = getShelter(dog.shelterId);
-            const isNew = log.id === newId;
-            const body = (
-              <>
-                <span className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl">
-                  <DogFace dog={dog} sizes="48px" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-bold text-ink-900">{dog.name}</span>
-                    <span className="tnum text-sm text-ink-500">
-                      {formatDateKo(log.date)} · {log.durationMin}분
-                    </span>
-                    {isNew && <span className="chip bg-sage-600 font-semibold text-white">새 기록</span>}
-                  </span>
-                  {log.note && (
-                    <span className="mt-1 block text-[15px] leading-relaxed text-ink-700">{log.note}</span>
-                  )}
-                  {log.observations && log.observations.length > 0 && (
-                    <span className="mt-1.5 flex flex-wrap gap-1.5">
-                      {log.observations.map((o) => (
-                        <span key={o} className="chip bg-cream-200/80 text-ink-700">
-                          {o}
+      {/* 산책 일지 — 달마다 묶은 타임라인 */}
+      <section className="mt-10" aria-labelledby="journal-title">
+        <h2 id="journal-title" className="text-lg font-bold text-ink-900">
+          산책 일지
+        </h2>
+        {months.map((g) => (
+          <div key={g.key} className="mt-4">
+            <h3 className="sticky top-16 z-10 -mx-4 flex items-baseline gap-2 bg-cream-50/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 md:mx-0 md:px-0">
+              <span className="text-[15px] font-bold text-ink-900">{g.label}</span>
+              <span className="tnum text-[13px] text-ink-500">
+                {g.logs.length}회 · {formatDuration(g.minutes)}
+              </span>
+            </h3>
+            <ol className="relative ml-[23px] border-l-2 border-cream-200 pl-5">
+              {g.logs.map((log) => {
+                const dog = getDog(log.dogId);
+                if (!dog) return null;
+                const shelter = getShelter(dog.shelterId);
+                const isNew = log.id === newId;
+                const body = (
+                  <>
+                    <span className="flex items-center gap-3">
+                      <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl">
+                        <DogFace dog={dog} sizes="44px" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="font-bold text-ink-900">{dog.name}</span>
+                          <span className="tnum text-sm text-ink-500">
+                            {formatDateKo(log.date)} · {log.durationMin}분
+                          </span>
+                          {isNew && (
+                            <span className="chip bg-sage-600 font-semibold text-white">새 기록</span>
+                          )}
                         </span>
-                      ))}
+                        <span className="block text-[13px] text-ink-500">{shelter?.name}</span>
+                      </span>
                     </span>
-                  )}
-                  <span className="mt-1 block text-[13px] text-ink-500">{shelter?.name}</span>
-                </span>
-              </>
-            );
-            const cls = cn("flex gap-4 px-1 py-4", isNew && "-mx-3 rounded-2xl bg-sage-50 px-4");
-            return (
-              <li key={log.id}>
-                {log.requestId ? (
-                  <Link href={`/requests/${log.requestId}`} className={cn(cls, "hover:bg-cream-100/60")}>
-                    {body}
-                  </Link>
-                ) : (
-                  <div className={cls}>{body}</div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                    {log.note && (
+                      <span className="mt-2 block text-[15px] leading-relaxed text-ink-700">{log.note}</span>
+                    )}
+                    {log.observations && log.observations.length > 0 && (
+                      <span className="mt-2 flex flex-wrap gap-1.5">
+                        {log.observations.map((o) => (
+                          <span key={o} className="chip bg-cream-200/80 text-ink-700">
+                            {o}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </>
+                );
+                const cls = cn(
+                  "block rounded-2xl bg-white p-4 ring-1 ring-cream-300/70 transition-shadow",
+                  isNew && "bg-sage-50 ring-2 ring-sage-400"
+                );
+                return (
+                  <li key={log.id} className="relative py-2">
+                    {/* 타임라인 점 */}
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "absolute -left-[27px] top-7 h-3 w-3 rounded-full ring-4 ring-cream-50",
+                        isNew ? "bg-sage-600" : "bg-sage-400"
+                      )}
+                    />
+                    {log.requestId ? (
+                      <Link href={`/requests/${log.requestId}`} className={cn(cls, "hover:shadow-card")}>
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className={cls}>{body}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        ))}
       </section>
     </>
   );

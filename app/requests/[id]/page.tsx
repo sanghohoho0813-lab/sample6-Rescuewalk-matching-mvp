@@ -3,9 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, Loader2, MessageSquareText, PawPrint } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarPlus,
+  Check,
+  Clock,
+  Loader2,
+  MapPin,
+  MessageSquareText,
+  PawPrint,
+  Phone,
+} from "lucide-react";
 import Dialog from "@/components/Dialog";
 import EmptyState from "@/components/EmptyState";
+import PrepChecklist from "@/components/PrepChecklist";
+import QuickAction from "@/components/QuickAction";
 import StatusBadge from "@/components/StatusBadge";
 import VisitInfo from "@/components/VisitInfo";
 import VisitStages from "@/components/VisitStages";
@@ -16,7 +28,8 @@ import { OBSERVATIONS } from "@/lib/domain/impact";
 import { canCancel, currentStageIndex } from "@/lib/domain/requests";
 import { useStore } from "@/lib/store";
 import { useClock } from "@/lib/useClock";
-import { ARRIVE_EARLY_MIN, COMMON_BRING, CONTACT_FLOW, PROVIDED } from "@/lib/visitGuide";
+import { buildIcs, downloadIcs, visitEvent } from "@/lib/calendar";
+import { ARRIVE_EARLY_MIN, COMMON_BRING, CONTACT_FLOW, PROVIDED, mapLink, telLink } from "@/lib/visitGuide";
 import { cn, formatDateFullKo, formatDateKo, formatTimeKo, relativeDayLabel, withJosa } from "@/lib/utils";
 
 const DURATIONS = [20, 30, 40, 60, 90];
@@ -110,6 +123,13 @@ export default function RequestDetailPage() {
       }
       router.push(`/activity?new=${logId}`);
     }, 500);
+  };
+
+  /** 방문 일정을 캘린더 파일로 — 하루 전 알림 포함 */
+  const addToCalendar = () => {
+    if (!shelter) return;
+    downloadIcs(`rescuewalk-${req.reservationNo}.ics`, buildIcs(visitEvent(req, dog, shelter)));
+    showToast("캘린더 파일을 받았어요. 열면 일정에 추가돼요");
   };
 
   // 지금 단계의 안내와 단 하나의 주요 행동
@@ -240,9 +260,18 @@ export default function RequestDetailPage() {
             </div>
           </section>
 
+          {/* 방문 바로가기 — 가기 전·가는 길에 가장 자주 하는 세 가지 */}
+          {isOpen && shelter && (
+            <nav aria-label="방문 바로가기" className="mt-4 grid grid-cols-3 gap-2.5">
+              <QuickAction icon={MapPin} label="길찾기" href={mapLink(shelter)} />
+              <QuickAction icon={Phone} label="보호소 전화" href={telLink(shelter.phone)} />
+              <QuickAction icon={CalendarPlus} label="캘린더에 추가" onClick={addToCalendar} />
+            </nav>
+          )}
+
           {/* 방문 정보 — 열려 있는 신청에서 가장 중요한 정보 */}
           <section className="mt-10">
-            <h2 className="text-base font-bold text-ink-900">방문 정보</h2>
+            <h2 className="text-lg font-bold text-ink-900">방문 정보</h2>
             <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-cream-300">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sage-50 text-sage-700">
                 <Clock className="h-5 w-5" aria-hidden />
@@ -273,23 +302,18 @@ export default function RequestDetailPage() {
           {isOpen && (
             <>
               <section className="mt-10">
-                <h2 className="text-base font-bold text-ink-900">챙겨 오세요</h2>
-                <ul className="mt-3 space-y-2">
-                  {[...COMMON_BRING, ...(dog.bring ?? [])].map((b) => (
-                    <li key={b} className="flex items-center gap-2.5 text-[15px] text-ink-900">
-                      <Check className="h-4 w-4 shrink-0 text-sage-600" strokeWidth={3} aria-hidden />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-2.5 text-sm text-ink-500">{PROVIDED}</p>
+                <h2 className="text-lg font-bold text-ink-900">챙겨 오세요</h2>
+                <div className="mt-3">
+                  <PrepChecklist requestId={req.id} items={[...COMMON_BRING, ...(dog.bring ?? [])]} />
+                </div>
+                <p className="mt-2 text-sm text-ink-500">{PROVIDED}</p>
                 <p className="mt-2 rounded-xl bg-tangerine-50 px-3.5 py-2.5 text-sm text-ink-900">
                   <strong className="font-semibold">{dog.name}</strong> · {dog.walkNote.caution}
                 </p>
               </section>
 
               <section className="mt-10">
-                <h2 className="flex items-center gap-1.5 text-base font-bold text-ink-900">
+                <h2 className="flex items-center gap-1.5 text-lg font-bold text-ink-900">
                   <MessageSquareText className="h-4 w-4 text-sage-600" aria-hidden /> 연락은 이렇게 와요
                 </h2>
                 <ol className="mt-3 space-y-2">
@@ -308,7 +332,7 @@ export default function RequestDetailPage() {
 
           {/* 신청자 정보 */}
           <section className="mt-10">
-            <h2 className="text-base font-bold text-ink-900">신청자 정보</h2>
+            <h2 className="text-lg font-bold text-ink-900">신청자 정보</h2>
             <dl className="mt-3 divide-y divide-cream-200 border-y border-cream-200 text-[15px]">
               {[
                 { label: "이름", value: req.applicant.name },
@@ -403,6 +427,17 @@ export default function RequestDetailPage() {
           </>
         }
       >
+        <div className="mb-5 flex items-center gap-3 rounded-2xl bg-cream-100/70 p-3">
+          <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl">
+            <DogFace dog={dog} sizes="48px" />
+          </span>
+          <span className="min-w-0 text-sm">
+            <span className="block font-semibold text-ink-900">{dog.name}</span>
+            <span className="tnum block truncate text-ink-500">
+              {formatDateKo(req.date)} {formatTimeKo(req.time)} · {shelter?.name}
+            </span>
+          </span>
+        </div>
         <fieldset>
           <legend className="text-sm font-semibold text-ink-700">함께 걸은 시간</legend>
           <div className="mt-2 grid grid-cols-5 gap-2">

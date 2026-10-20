@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Dog, MapPin, Phone } from "lucide-react";
 import DogCard from "@/components/DogCard";
+import QuickAction from "@/components/QuickAction";
 import ShelterImage from "@/components/ShelterImage";
 import ShelterWeek, { ShelterOpenNow } from "@/components/ShelterWeek";
 import VisitInfo from "@/components/VisitInfo";
 import { dogs } from "@/lib/data/dogs";
 import { getShelter, shelters } from "@/lib/data/shelters";
 import { closedDaysLabel } from "@/lib/domain/schedule";
+import { mapLink, telLink } from "@/lib/visitGuide";
 
 export function generateStaticParams() {
   return shelters.map((s) => ({ id: s.id }));
@@ -81,6 +83,15 @@ export default function ShelterDetailPage({ params }: { params: { id: string } }
               </div>
             ))}
           </dl>
+          <nav aria-label="보호소 바로가기" className="mt-3 grid grid-cols-3 gap-2.5">
+            <QuickAction icon={MapPin} label="길찾기" href={mapLink(shelter)} />
+            <QuickAction icon={Phone} label="전화하기" href={telLink(shelter.phone)} />
+            <QuickAction
+              icon={Dog}
+              label="아이들 보기"
+              href={`/dogs?region=${encodeURIComponent(shelter.region)}&shelter=${shelter.id}`}
+            />
+          </nav>
           <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="보호소 특징">
             {shelter.features.map((f) => (
               <li key={f} className="chip bg-sage-50 text-sage-800 ring-1 ring-sage-100">

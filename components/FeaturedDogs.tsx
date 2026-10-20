@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import DogCard from "@/components/DogCard";
-import DogRail from "@/components/DogRail";
+import Carousel from "@/components/Carousel";
 import { dogs } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
 import { searchDogs, type WhenKey, EMPTY_FILTERS, toDogQuery } from "@/lib/domain/dogSearch";
@@ -86,11 +86,11 @@ export default function FeaturedDogs() {
 
       <div className="mt-7">
         {!ready ? (
-          <div className="flex gap-4 overflow-hidden sm:grid sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+          <div className="flex gap-4 overflow-hidden sm:gap-5 lg:gap-6" aria-busy="true">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="h-[360px] w-[80%] shrink-0 animate-pulse rounded-[20px] bg-cream-200/70 sm:w-auto"
+                className="h-[360px] w-[80%] shrink-0 animate-pulse rounded-[20px] bg-cream-200/70 sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-3rem)/3)]"
               />
             ))}
           </div>
@@ -99,11 +99,11 @@ export default function FeaturedDogs() {
             지금은 신청할 수 있는 일정이 없어요. 다음 주 일정을 확인해 보세요.
           </p>
         ) : (
-          <DogRail label="지금 산책 가능한 아이">
+          <Carousel label="지금 산책 가능한 아이">
             {list.map((dog, i) => (
               <DogCard key={dog.id} dog={dog} priority={i < 3} />
             ))}
-          </DogRail>
+          </Carousel>
         )}
       </div>
       {ready && moreCount > 0 && (
