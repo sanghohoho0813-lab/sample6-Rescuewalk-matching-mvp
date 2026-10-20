@@ -1,4 +1,4 @@
-import { test, expect, isMobile } from "./fixtures";
+import { test, expect, gotoReady, isMobile } from "./fixtures";
 
 test.describe("둘러보기", () => {
   test("홈의 '가능한 N마리 모두 보기'는 같은 N마리 목록으로 이어집니다", async ({ page }) => {
@@ -63,6 +63,23 @@ test.describe("둘러보기", () => {
     await expect(page.getByRole("main").locator("article")).toHaveCount(18);
   });
 
+  test("이름·품종으로 찾고, 칩으로 검색을 풉니다", async ({ page }) => {
+    await gotoReady(page, "/dogs");
+    const search = page.getByRole("searchbox", { name: "이름·품종·보호소로 찾기" });
+    await search.fill("허스키");
+    await expect(page).toHaveURL(/q=/);
+    const cards = page.getByRole("main").locator("article");
+    await expect(cards).toHaveCount(1);
+    await expect(cards).toContainText("장군");
+    // 검색어가 주소에 있으므로 새로고침해도 유지
+    await page.reload();
+    await expect(search).toHaveValue("허스키");
+    await page.getByRole("button", { name: /허스키.*검색 조건 해제/ }).click();
+    await expect(page).toHaveURL(/\/dogs$/);
+    await expect(search).toHaveValue("");
+    await expect(cards).toHaveCount(18);
+  });
+
   test("결과가 없으면 한 번에 조건을 풀 수 있습니다", async ({ page }) => {
     await page.goto("/dogs?region=%EB%B6%80%EC%82%B0&size=%EB%8C%80%ED%98%95&level=%EC%89%AC%EC%9B%80");
     await expect(page.getByText("조건에 맞는 아이를 찾지 못했어요")).toBeVisible();
@@ -82,6 +99,20 @@ test.describe("둘러보기", () => {
     await expect(page.getByText(/경험이 있는 분만 신청할 수 있어요/).first()).toBeVisible();
     await expect(page.getByRole("main")).toContainText("장군과");
     await expect(page.getByRole("main")).not.toContainText("장군와");
+  });
+
+  test("모바일 상세: 사진을 지나면 이름·목차가 위에 붙고, 목차로 섹션을 오갑니다", async ({ page }) => {
+    test.skip(!isMobile(page), "모바일 전용 — PC 는 공용 헤더와 옆 패널");
+    await gotoReady(page, "/dogs/dog-janggun");
+    const toc = page.getByRole("navigation", { name: "장군 소개 목차" });
+    await expect(toc).toBeHidden();
+    await page.evaluate(() => window.scrollTo(0, 1200));
+    await expect(toc).toBeVisible();
+    await toc.getByRole("link", { name: "보호소" }).click();
+    await expect(page.getByRole("heading", { name: "보호소 안내" })).toBeInViewport();
+    await expect(toc.getByRole("link", { name: "보호소" })).toHaveAttribute("aria-current", "location");
+    // 목차 이동은 기록을 남기지 않습니다(뒤로가기 = 이전 화면)
+    expect(page.url()).not.toContain("#");
   });
 
   test("보호소 화면에서 운영 정보와 이번 주 일정을 봅니다", async ({ page }) => {

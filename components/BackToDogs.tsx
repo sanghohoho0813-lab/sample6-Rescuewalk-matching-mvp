@@ -12,9 +12,12 @@ import { cn } from "@/lib/utils";
  */
 export default function BackToDogs({
   variant = "link",
+  label = "강아지 찾기",
   className,
 }: {
   variant?: "link" | "overlay";
+  /** overlay 의 읽는 이름 */
+  label?: string;
   className?: string;
 }) {
   const [href, setHref] = useState("/dogs");
@@ -29,7 +32,7 @@ export default function BackToDogs({
     return (
       <Link
         href={href}
-        aria-label="강아지 찾기"
+        aria-label={label}
         className={cn(
           "flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink-900 shadow-card backdrop-blur transition-transform active:scale-95",
           className

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Heart, UserRound } from "lucide-react";
@@ -18,11 +19,20 @@ const NAV_ITEMS = [
 export default function Header() {
   const pathname = usePathname();
   const { favorites, hydrated } = useStore();
+  // 맨 위에서는 바탕과 이어지고, 내리기 시작하면 옅은 그림자로 본문과 나뉩니다
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b border-cream-300/60 bg-cream-50/90 backdrop-blur-md",
+        "sticky top-0 z-40 border-b bg-cream-50/90 backdrop-blur-md transition-[border-color,box-shadow] duration-200",
+        scrolled ? "border-cream-300/70 shadow-[0_4px_16px_rgba(74,62,42,0.06)]" : "border-transparent",
         // 상세·신청은 모바일에서 자체 뒤로가기를 가진 집중 화면(사진이 화면 위까지)
         isFocusRoute(pathname) && "hidden md:block"
       )}

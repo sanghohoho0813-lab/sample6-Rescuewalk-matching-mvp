@@ -38,7 +38,12 @@ export const SORTS = [
 export type SortKey = (typeof SORTS)[number]["key"];
 export const DEFAULT_SORT: SortKey = "recommended";
 
+/** 검색어 최대 길이 — 주소에 실리므로 짧게 */
+export const QUERY_MAX = 30;
+
 export interface DogFilters {
+  /** 이름·품종·보호소·지역 검색어(앞뒤 공백 제거). 없으면 "" */
+  q: string;
   region: (typeof REGIONS)[number] | null;
   shelterId: string | null;
   size: (typeof SIZES)[number] | null;
@@ -49,6 +54,7 @@ export interface DogFilters {
 }
 
 export const EMPTY_FILTERS: DogFilters = {
+  q: "",
   region: null,
   shelterId: null,
   size: null,
@@ -75,6 +81,7 @@ export function parseDogQuery(sp: URLSearchParams): { filters: DogFilters; sort:
   const sortRaw = sp.get("sort") === "today" ? "soon" : sp.get("sort");
   return {
     filters: {
+      q: (sp.get("q") ?? "").trim().slice(0, QUERY_MAX),
       region,
       // 지역과 맞지 않는 보호소 조합은 결과가 항상 0건이므로 보호소 쪽을 버립니다
       shelterId: shelter && (!region || shelter.region === region) ? shelter.id : null,
@@ -99,6 +106,7 @@ export function parseDogQuery(sp: URLSearchParams): { filters: DogFilters; sort:
 /** 기본값은 쓰지 않아 주소가 짧게 유지됩니다. 비어 있으면 "" */
 export function toDogQuery(f: DogFilters, sort: SortKey): string {
   const q = new URLSearchParams();
+  if (f.q) q.set("q", f.q);
   if (f.when) q.set("when", f.when);
   if (f.region) q.set("region", f.region);
   if (f.shelterId) q.set("shelter", f.shelterId);
@@ -125,12 +133,31 @@ export const canWalkThisWeek = (d: Dog, ctx: ScheduleContext) => openDaysThisWee
 /** 다음 가능한 일정 — 정렬과 카드 표시에 공용 */
 export const nextOpeningOf = (d: Dog, ctx: ScheduleContext) => nextOpening(d, shelterFor(d), ctx);
 
+/** 띄어쓰기·대소문자 차이는 무시('보 리', '허스키 믹스'도 찾게) */
+const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+
+/** 이름·품종·한 줄 소개·보호소 이름·지역(구 단위까지)에서 찾습니다 */
+export function matchesQuery(dog: Dog, query: string): boolean {
+  const q = normalize(query);
+  if (!q) return true;
+  const shelter = getShelter(dog.shelterId);
+  const haystack = [
+    dog.name,
+    dog.breed,
+    dog.headline,
+    shelter?.name ?? "",
+    shelter?.address.split(" ").slice(0, 2).join(" ") ?? "",
+  ];
+  return haystack.some((h) => normalize(h).includes(q));
+}
+
 /**
  * 조건 사이는 AND, 성격 태그끼리는 OR(하나라도 있으면) 입니다.
  * 성격을 여러 개 고를수록 결과가 0건으로 줄어드는 것보다 '이런 아이들'로 넓혀 보는 쪽이 자연스럽기 때문입니다.
  * 일정 조건(when)은 시각을 알아야 하므로 ctx 가 없으면(서버 렌더) 적용하지 않습니다.
  */
 export function matchesFilters(dog: Dog, f: DogFilters, ctx?: ScheduleContext): boolean {
+  if (f.q && !matchesQuery(dog, f.q)) return false;
   if (f.region && getShelter(dog.shelterId)?.region !== f.region) return false;
   if (f.shelterId && dog.shelterId !== f.shelterId) return false;
   if (f.size && dog.size !== f.size) return false;
@@ -185,6 +212,7 @@ export function searchDogs(
 /** 적용 중인 조건을 '해제 가능한 칩'으로 — 라벨과 그 조건만 푼 필터 */
 export function activeFilterChips(f: DogFilters): { key: string; label: string; without: DogFilters }[] {
   const chips: { key: string; label: string; without: DogFilters }[] = [];
+  if (f.q) chips.push({ key: "q", label: `‘${f.q}’ 검색`, without: { ...f, q: "" } });
   if (f.when)
     chips.push({
       key: "when",

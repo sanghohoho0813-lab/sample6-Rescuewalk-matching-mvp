@@ -4,6 +4,7 @@ import { StoreProvider } from "@/lib/store";
 import Header from "@/components/Header";
 import MobileNav from "@/components/MobileNav";
 import Footer from "@/components/Footer";
+import HideOnFocus from "@/components/HideOnFocus";
 import SampleBridgeSlot from "@/components/SampleBridgeSlot";
 import Toast from "@/components/Toast";
 import Script from "next/script";
@@ -67,7 +68,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             {children}
           </main>
           <SampleBridgeSlot />
-          <Footer />
+          <HideOnFocus>
+            <Footer />
+          </HideOnFocus>
           <MobileNav />
           <Toast />
         </StoreProvider>

@@ -9,6 +9,7 @@ import DogRail from "@/components/DogRail";
 import DogSchedule from "@/components/DogSchedule";
 import NextWalk from "@/components/NextWalk";
 import VisitInfo from "@/components/VisitInfo";
+import DetailAppBar from "./DetailAppBar";
 import StickyApplyBar from "./StickyApplyBar";
 import { dogs, getDog } from "@/lib/data/dogs";
 import { getShelter } from "@/lib/data/shelters";
@@ -36,16 +37,19 @@ export function generateMetadata({ params }: { params: { id: string } }) {
 }
 
 function Section({
+  id,
   title,
   children,
   className,
 }: {
+  id?: string;
   title: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <section className={cn("mt-10", className)}>
+    // scroll-mt: 모바일 상단 목차(앱 바 + 탭)에 제목이 가리지 않게
+    <section id={id} className={cn("mt-10 scroll-mt-32 md:scroll-mt-24", className)}>
       <h2 className="text-lg font-bold text-ink-900">{title}</h2>
       <div className="mt-3">{children}</div>
     </section>
@@ -86,7 +90,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
         <div className="grid grid-cols-1 md:mt-2 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
           <div className="min-w-0">
             {/* 모바일: 사진이 화면 위·양옆까지 차고, 본문이 그 위로 살짝 올라오는 시트 / PC: 둥근 사진 */}
-            <div className="relative -mx-4 overflow-hidden sm:-mx-6 md:mx-0 md:rounded-[28px]">
+            <div id="dog-hero" className="relative -mx-4 overflow-hidden sm:-mx-6 md:mx-0 md:rounded-[28px]">
               <DogImage
                 dog={dog}
                 aspect="aspect-square sm:aspect-[16/11] md:aspect-[16/10]"
@@ -146,8 +150,9 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
 
             {/* 1. 누구에게 맞는지 — 신청 전 가장 먼저 판단할 것 */}
             <section
+              id="sec-fit"
               aria-labelledby="fit-title"
-              className="mt-4 rounded-[20px] border border-cream-300 bg-white p-5 sm:p-6"
+              className="mt-4 scroll-mt-32 rounded-[20px] border border-cream-300 bg-white p-5 sm:p-6 md:scroll-mt-24"
             >
               <p id="fit-title" className="flex items-center gap-1.5 text-sm font-semibold text-sage-700">
                 <ShieldCheck className="h-4 w-4" aria-hidden /> 이런 분께 추천해요
@@ -176,12 +181,12 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
             </section>
 
             {/* 2. 언제 — 모바일은 본문에, PC 는 오른쪽 패널에 */}
-            <Section title="가능한 일정" className="lg:hidden">
+            <Section id="sec-schedule" title="가능한 일정" className="lg:hidden">
               <DogSchedule dog={dog} />
             </Section>
 
             {/* 3. 어떤 아이인지 */}
-            <Section title={`${withJosa(dog.name, "는")} 이런 아이예요`}>
+            <Section id="sec-about" title={`${withJosa(dog.name, "는")} 이런 아이예요`}>
               <p className="text-[17px] leading-[1.75] text-ink-700">{dog.story}</p>
               <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="성격">
                 {dog.personality.map((p) => (
@@ -193,7 +198,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
             </Section>
 
             {/* 4. 걸을 때 */}
-            <Section title="산책할 때 모습">
+            <Section id="sec-walk" title="산책할 때 모습">
               <ul className="space-y-2">
                 {dog.habits.map((h) => (
                   <li key={h} className="flex gap-2.5 text-[15px] leading-relaxed text-ink-900">
@@ -228,7 +233,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
               </dl>
             </Section>
 
-            <Section title="꼭 지켜주세요">
+            <Section id="sec-care" title="꼭 지켜주세요">
               <p className="flex gap-2.5 rounded-2xl bg-tangerine-50 p-4 text-[15px] leading-relaxed text-ink-900">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-tangerine-700" aria-hidden />
                 {dog.walkNote.caution}
@@ -251,7 +256,7 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
             </Section>
 
             {shelter && (
-              <Section title="보호소 안내">
+              <Section id="sec-shelter" title="보호소 안내">
                 <Link
                   href={`/shelters/${shelter.id}`}
                   className="mb-1 flex items-center justify-between gap-3 py-1 text-base font-semibold text-ink-900 hover:text-sage-700"
@@ -306,6 +311,17 @@ export default function DogDetailPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
+      <DetailAppBar
+        dog={dog}
+        sections={[
+          { id: "sec-fit", label: "추천" },
+          { id: "sec-schedule", label: "일정" },
+          { id: "sec-about", label: "성격" },
+          { id: "sec-walk", label: "산책" },
+          { id: "sec-care", label: "주의" },
+          ...(shelter ? [{ id: "sec-shelter", label: "보호소" }] : []),
+        ]}
+      />
       <StickyApplyBar dog={dog} />
     </>
   );

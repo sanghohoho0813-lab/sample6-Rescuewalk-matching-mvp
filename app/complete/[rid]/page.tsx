@@ -53,8 +53,14 @@ export default function CompletePage() {
   return (
     <div className="container-app max-w-lg py-10 md:py-14">
       <div className="text-center">
-        <div className="mx-auto flex h-16 w-16 animate-pop-in items-center justify-center rounded-full bg-sage-500 text-white motion-reduce:animate-none">
-          <Check className="h-8 w-8" strokeWidth={3} />
+        {/* 확인 표시만이 아니라 '누구를 만나러 가는지' — 아이 얼굴 위에 완료 표시 */}
+        <div className="relative mx-auto h-24 w-24 animate-pop-in motion-reduce:animate-none">
+          <span className="block h-24 w-24 overflow-hidden rounded-full ring-4 ring-white shadow-card-hover">
+            <DogFace dog={dog} sizes="96px" />
+          </span>
+          <span className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-sage-600 text-white ring-4 ring-cream-50">
+            <Check className="h-5 w-5" strokeWidth={3} aria-hidden />
+          </span>
         </div>
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-ink-900">산책 신청이 접수됐어요</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-ink-500">

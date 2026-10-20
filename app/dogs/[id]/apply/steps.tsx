@@ -3,6 +3,7 @@
 import { useRef, type MutableRefObject, type ReactNode } from "react";
 import Link from "next/link";
 import { AlertCircle, AlertTriangle, Check, MapPin } from "lucide-react";
+import DateCell from "@/components/DateCell";
 import TimeSlotPicker from "@/components/TimeSlotPicker";
 import DogImage, { DogFace } from "@/components/DogImage";
 import { MEMO_MAX, NAME_MAX, SAFETY_PROMISES, formatPhone } from "@/lib/domain/apply";
@@ -39,6 +40,19 @@ export function ScheduleStep({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog
   const { days, draft, pickDate, pickTime, booked, notice, today } = flow;
   const selected = days.find((d) => d.date === draft.date);
   const timesRef = useRef<HTMLDivElement>(null);
+  // 칸 아래 범례 — 실제로 보이는 표시만
+  const offReasons = new Set(
+    days
+      .filter((d) => d.open.length === 0)
+      .map((d) =>
+        d.closed ? "closed" : shelter && scheduledSlots(dog, shelter, d.date).length > 0 ? "full" : "rest"
+      )
+  );
+  const legend = [
+    offReasons.has("closed") && "휴무 = 보호소 쉬는 날",
+    offReasons.has("full") && "마감 = 남은 시간 없음",
+    offReasons.has("rest") && `– = ${withJosa(dog.name, "가")} 산책하지 않는 날`,
+  ].filter((x): x is string => !!x);
   // 모바일에서는 날짜 칸이 화면을 채우므로, 날짜를 고르면 시간 목록이 보이도록 내려줍니다
   const onPickDate = (iso: string) => {
     pickDate(iso);
@@ -63,7 +77,8 @@ export function ScheduleStep({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog
           {notice}
         </p>
       )}
-      <div className="mt-5 grid grid-cols-4 gap-2 sm:grid-cols-7">
+      {/* 7칸씩 — 같은 열이 같은 요일이라 휴무 요일이 세로로 줄지어 보입니다 */}
+      <div className="mt-5 grid grid-cols-7 gap-1.5 sm:gap-2">
         {days.map((d) => {
           const [, , dd] = d.date.split("-").map(Number);
           const wd = weekdayOf(d.date);
@@ -77,42 +92,30 @@ export function ScheduleStep({ flow, dog, shelter }: { flow: ApplyFlow; dog: Dog
                 : "쉬는 날"
               : null;
           return (
-            <button
+            <DateCell
               key={d.date}
-              type="button"
-              disabled={full}
+              state={isSel ? "selected" : full ? "off" : "open"}
+              top={d.date === today ? "오늘" : DAY[wd]}
+              topClassName={WEEKDAY_TONE[wd]}
+              day={dd}
+              // '쉬는 날'(이 아이가 산책하지 않는 요일)은 칸이 좁아 줄표로, 읽는 이름에는 그대로
+              sub={reason === "쉬는 날" ? "–" : (reason ?? `${d.open.length}타임`)}
               onClick={() => onPickDate(d.date)}
               aria-pressed={isSel}
               aria-label={`${formatDateKo(d.date)}${d.date === today ? " 오늘" : ""}${reason ? ` (${reason})` : ` ${d.open.length}개 시간 가능`}`}
-              className={cn(
-                "flex min-h-[68px] flex-col items-center justify-center rounded-2xl border transition-colors duration-150",
-                isSel && "border-sage-600 bg-sage-600 text-white",
-                !isSel && !full && "border-cream-300 bg-white hover:border-sage-400",
-                full && "cursor-not-allowed border-transparent bg-cream-100 text-ink-400"
-              )}
-            >
-              <span
-                className={cn(
-                  "text-[13px]",
-                  isSel ? "text-white" : full ? "text-ink-400" : (WEEKDAY_TONE[wd] ?? "text-ink-500")
-                )}
-              >
-                {d.date === today ? "오늘" : DAY[wd]}
-              </span>
-              <span className={cn("tnum text-base font-semibold", !isSel && !full && "text-ink-900")}>
-                {dd}
-              </span>
-              <span
-                className={cn("text-[13px]", isSel ? "text-white" : full ? "text-ink-400" : "text-sage-700")}
-              >
-                {reason ?? `${d.open.length}타임`}
-              </span>
-            </button>
+            />
           );
         })}
       </div>
+      {legend.length > 0 && (
+        <p className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-ink-500" aria-hidden>
+          {legend.map((l) => (
+            <span key={l}>{l}</span>
+          ))}
+        </p>
+      )}
 
-      <div ref={timesRef} className="mt-7 scroll-mb-32" aria-live="polite">
+      <div ref={timesRef} className="mt-6 scroll-mb-32" aria-live="polite">
         {selected ? (
           <>
             <h3 className="text-[15px] font-semibold text-ink-900">

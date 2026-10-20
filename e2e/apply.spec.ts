@@ -91,6 +91,11 @@ test.describe("산책 신청 (일정 → 참여자 정보 → 확인)", () => {
     const closed = page.locator('section[aria-labelledby="step-title"] button[aria-label$="(휴무)"]');
     expect(await closed.count()).toBeGreaterThanOrEqual(2);
     await expect(closed.first()).toBeDisabled();
+    // 날짜는 7칸씩 — 같은 요일의 휴무는 같은 열에 줄지어(월·화 두 열을 넘지 않음)
+    const xs = new Set(
+      (await Promise.all((await closed.all()).map((b) => b.boundingBox()))).map((b) => Math.round(b!.x))
+    );
+    expect(xs.size).toBeLessThanOrEqual(2);
   });
 
   test("주소로 뒷단계에 바로 들어오면 첫 미완료 단계로 돌아갑니다", async ({ page }) => {

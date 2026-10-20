@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { PawPrint } from "lucide-react";
+import { DogFace } from "@/components/DogImage";
+import { getDog } from "@/lib/data/dogs";
+
+/** 빈 화면에 겹쳐 보이는 아이들 — 아이콘 하나보다 '여기에 누가 기다리는지'가 먼저 보이게 */
+const FACES = ["dog-bori", "dog-songi", "dog-dani"]
+  .map(getDog)
+  .filter((d): d is NonNullable<typeof d> => !!d);
 
 export default function EmptyState({
   message,
@@ -15,9 +21,17 @@ export default function EmptyState({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-[20px] border border-dashed border-cream-300 px-6 py-14 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cream-200 text-sage-600">
-        <PawPrint className="h-6 w-6" />
+    <div className="flex flex-col items-center gap-4 rounded-[24px] bg-white px-6 py-12 text-center ring-1 ring-cream-300/70">
+      <span className="flex -space-x-3" aria-hidden>
+        {FACES.map((dog, i) => (
+          <span
+            key={dog.id}
+            className="h-12 w-12 overflow-hidden rounded-full ring-[3px] ring-white"
+            style={{ transform: `translateY(${i === 1 ? -6 : 0}px)` }}
+          >
+            <DogFace dog={dog} sizes="48px" />
+          </span>
+        ))}
       </span>
       <p className="whitespace-pre-line text-[15px] leading-relaxed text-ink-500">{message}</p>
       {ctaLabel && onAction && (

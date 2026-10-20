@@ -107,6 +107,13 @@ const config: Config = {
           "0%": { transform: "translateY(100%)" },
           "100%": { transform: "translateY(0)" },
         },
+        /** 찜할 때 하트가 한 번 튀어 오르는 피드백(끝은 활성 상태 크기 1.1과 같게) */
+        "heart-pop": {
+          "0%": { transform: "scale(1)" },
+          "35%": { transform: "scale(1.38)" },
+          "65%": { transform: "scale(0.92)" },
+          "100%": { transform: "scale(1.1)" },
+        },
         wag: {
           "0%, 100%": { transform: "rotate(-8deg)" },
           "50%": { transform: "rotate(8deg)" },
@@ -133,6 +140,7 @@ const config: Config = {
         "fade-in": "fade-in 0.3s ease-out both",
         "pop-in": "pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
         "slide-up": "slide-up 0.28s ease-out both",
+        "heart-pop": "heart-pop 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
         wag: "wag 1s ease-in-out infinite",
         "light-sweep": "light-sweep 6s ease-in-out infinite",
         "soft-pulse": "soft-pulse 3.2s ease-in-out infinite",

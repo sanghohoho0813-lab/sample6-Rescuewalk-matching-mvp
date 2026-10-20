@@ -7,7 +7,9 @@ import {
   canWalkThisWeek,
   canWalkToday,
   isResting,
+  QUERY_MAX,
   matchesFilters,
+  matchesQuery,
   nextOpeningOf,
   parseDogQuery,
   searchDogs,
@@ -28,6 +30,7 @@ describe("URL 쿼리 ↔ 필터", () => {
 
   it("직렬화한 쿼리를 다시 읽으면 같은 조건", () => {
     const f: DogFilters = {
+      q: "보리",
       region: "서울",
       shelterId: "sh-happy",
       size: "중형",
@@ -52,6 +55,12 @@ describe("URL 쿼리 ↔ 필터", () => {
       filters: { ...EMPTY_FILTERS, when: "today", needs: ["beginner"] },
       sort: "soon",
     });
+  });
+
+  it("검색어는 앞뒤 공백을 지우고 길이를 제한합니다", () => {
+    expect(parse("q=%20%20보리%20").filters.q).toBe("보리");
+    expect(parse(`q=${"가".repeat(50)}`).filters.q).toHaveLength(QUERY_MAX);
+    expect(toDogQuery({ ...EMPTY_FILTERS, q: "보리" }, "recommended")).toBe("?q=%EB%B3%B4%EB%A6%AC");
   });
 
   it("지역과 맞지 않는 보호소는 버립니다(항상 0건이 되는 조합)", () => {
@@ -107,6 +116,43 @@ describe("필터 규칙", () => {
           matchesFilters(d, { ...EMPTY_FILTERS, size: "소형" })
       );
     }
+  });
+});
+
+describe("검색", () => {
+  const names = (q: string) => searchDogs(dogs, { ...EMPTY_FILTERS, q }, "recommended").map((d) => d.name);
+
+  it("이름으로 찾습니다", () => {
+    expect(names("보리")).toEqual(["보리"]);
+  });
+
+  it("품종·보호소·지역으로도 찾고, 띄어쓰기·대소문자는 무시합니다", () => {
+    expect(names("허스키")).toContain("장군");
+    expect(names("허 스키")).toContain("장군");
+    const happy = dogs
+      .filter((d) => d.shelterId === "sh-happy")
+      .map((d) => d.name)
+      .sort();
+    expect(names("행복한쉼터").sort()).toEqual(happy);
+    expect(names("강서구").sort()).toEqual(happy);
+  });
+
+  it("다른 조건과 함께 쓰면 모두 만족해야 합니다(AND)", () => {
+    const f = { ...EMPTY_FILTERS, q: "행복한 쉼터", size: "중형" as const };
+    for (const d of searchDogs(dogs, f, "recommended")) {
+      expect(matchesQuery(d, "행복한 쉼터") && d.size === "중형").toBe(true);
+    }
+  });
+
+  it("없는 이름은 0건, 빈 검색어는 모두", () => {
+    expect(names("고양이")).toEqual([]);
+    expect(names("   ")).toHaveLength(dogs.length);
+  });
+
+  it("검색어도 해제 가능한 칩이 됩니다", () => {
+    const chips = activeFilterChips({ ...EMPTY_FILTERS, q: "보리", region: "서울" });
+    expect(chips.map((c) => c.key)).toEqual(["q", "region"]);
+    expect(chips[0].without).toEqual({ ...EMPTY_FILTERS, region: "서울" });
   });
 });
 

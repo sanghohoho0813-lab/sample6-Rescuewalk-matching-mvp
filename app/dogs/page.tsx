@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 import DogCard from "@/components/DogCard";
 import Dialog from "@/components/Dialog";
 import EmptyState from "@/components/EmptyState";
@@ -12,6 +12,7 @@ import {
   DIFFICULTIES,
   EMPTY_FILTERS,
   NEEDS,
+  QUERY_MAX,
   REGIONS,
   SIZES,
   SORTS,
@@ -212,6 +213,68 @@ function FilterPanel({
   );
 }
 
+/**
+ * 이름·품종·보호소 검색.
+ * 입력 중인 글자는 이 칸이 들고 있고(한글 조합 중에 주소가 끼어들지 않게), 잠깐 멈추면 주소에 반영합니다.
+ * 칩·'모두 해제'로 주소의 검색어가 바뀌면 칸도 따라갑니다.
+ */
+function SearchField({ value, onCommit }: { value: string; onCommit: (q: string) => void }) {
+  const [text, setText] = useState(value);
+  const commitRef = useRef(onCommit);
+  commitRef.current = onCommit;
+
+  useEffect(() => {
+    setText((t) => (t.trim() === value ? t : value));
+  }, [value]);
+
+  useEffect(() => {
+    const q = text.trim().slice(0, QUERY_MAX);
+    if (q === value) return;
+    const timer = setTimeout(() => commitRef.current(q), 250);
+    return () => clearTimeout(timer);
+  }, [text, value]);
+
+  return (
+    <form
+      role="search"
+      onSubmit={(e) => {
+        e.preventDefault();
+        commitRef.current(text.trim().slice(0, QUERY_MAX));
+        (document.activeElement as HTMLElement | null)?.blur();
+      }}
+      className="relative"
+    >
+      <Search
+        aria-hidden
+        className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-400"
+      />
+      <input
+        type="search"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        maxLength={QUERY_MAX}
+        enterKeyHint="search"
+        aria-label="이름·품종·보호소로 찾기"
+        placeholder="이름, 품종, 보호소로 찾기"
+        className="input-field !rounded-full pl-11 pr-11 [&::-webkit-search-cancel-button]:hidden"
+      />
+      {text && (
+        <button
+          type="button"
+          onClick={() => {
+            setText("");
+            commitRef.current("");
+          }}
+          aria-label="검색어 지우기"
+          className="absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-ink-400 hover:bg-cream-100 hover:text-ink-900"
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </button>
+      )}
+    </form>
+  );
+}
+
 function DogsBrowser() {
   const sp = useSearchParams();
   const { filters, sort } = useMemo(() => parseDogQuery(new URLSearchParams(sp.toString())), [sp]);
@@ -240,7 +303,7 @@ function DogsBrowser() {
 
   return (
     <div className="container-app pb-8 pt-6 md:pb-10 md:pt-10">
-      <header className="mb-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 lg:mb-6">
+      <header className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 lg:mb-8 lg:flex-nowrap">
         <div>
           <h1 className="page-title">강아지 찾기</h1>
           <p className="mt-1.5 text-[15px] text-ink-500" aria-live="polite">
@@ -250,7 +313,7 @@ function DogsBrowser() {
             </strong>
           </p>
         </div>
-        <label className="flex items-center gap-2 text-[15px] text-ink-500">
+        <label className="flex items-center gap-2 text-[15px] text-ink-500 lg:order-2">
           <span className="hidden lg:inline">정렬</span>
           <select
             aria-label="정렬"
@@ -265,6 +328,10 @@ function DogsBrowser() {
             ))}
           </select>
         </label>
+        {/* 모바일: 제목·정렬 아래 한 줄 전체 / PC: 제목과 정렬 사이 */}
+        <div className="order-last w-full lg:order-1 lg:ml-auto lg:w-[360px]">
+          <SearchField value={filters.q} onCommit={(q) => update((f) => ({ ...f, q }))} />
+        </div>
       </header>
 
       {/* 모바일 · 태블릿 — 필터 시트 + 자주 쓰는 조건은 바로. 목록을 내려도 헤더 아래에 붙어 있음 */}
@@ -343,7 +410,11 @@ function DogsBrowser() {
             </div>
           ) : result.length === 0 ? (
             <EmptyState
-              message={"조건에 맞는 아이를 찾지 못했어요.\n조건을 조금만 넓혀볼까요?"}
+              message={
+                filters.q && active.length === 1
+                  ? `‘${filters.q}’에 맞는 아이를 찾지 못했어요.\n이름·품종·보호소 이름으로 다시 찾아볼까요?`
+                  : "조건에 맞는 아이를 찾지 못했어요.\n조건을 조금만 넓혀볼까요?"
+              }
               ctaLabel="필터 모두 해제"
               onAction={() => commit(EMPTY_FILTERS, sort)}
             />
